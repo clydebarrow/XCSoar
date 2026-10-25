@@ -3,7 +3,10 @@
 
 #include "Queue.hpp"
 #include "DisplayOrientation.hpp"
+
+#ifndef ESP_PLATFORM
 #include "event/SignalMonitor.hxx"
+#endif
 
 #ifdef MESA_KMS
 #include "ui/display/Display.hpp"
@@ -12,10 +15,30 @@
 #include <algorithm>
 #include <cassert>
 #include <cerrno>
+
+#ifndef ESP_PLATFORM
 #include <signal.h>
 #include <sys/wait.h>
+#endif
 
 namespace UI {
+
+#ifdef ESP_PLATFORM
+
+/* ESP-IDF has no signals and no child processes */
+
+void
+BlockSignals() noexcept
+{
+}
+
+EventQueue::EventQueue([[maybe_unused]] Display &_display)
+{
+}
+
+EventQueue::~EventQueue() noexcept = default;
+
+#else
 
 /**
  * The signals which make XCSoar shut down cleanly.
@@ -67,6 +90,8 @@ EventQueue::OnChildExit() noexcept
     return result == pid || (result < 0 && errno == ECHILD);
   });
 }
+
+#endif // !ESP_PLATFORM
 
 void
 EventQueue::Push(const Event &event) noexcept

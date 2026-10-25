@@ -20,13 +20,13 @@ idf_component_register(
   PRIV_REQUIRES vfs espressif__freetype)
 
 if(NOT CMAKE_BUILD_EARLY_EXPANSION)
-  xcsoar_fetch_fmt()
+  xcsoar_fetch_libraries()
 
   set(generated_dir ${CMAKE_CURRENT_BINARY_DIR}/include)
   xcsoar_generate_math_tables(${XCSOAR_ROOT} ${generated_dir})
 
   target_include_directories(${COMPONENT_LIB} PRIVATE
-    ${generated_dir} ${fmt_SOURCE_DIR}/include)
+    ${generated_dir} ${fmt_SOURCE_DIR}/include ${boost_SOURCE_DIR})
   target_compile_definitions(${COMPONENT_LIB} PRIVATE
     ${XCSOAR_ESP32_DEFINES})
 

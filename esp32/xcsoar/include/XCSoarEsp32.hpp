@@ -58,21 +58,39 @@ struct Config {
                       void *ctx) noexcept;
   void *ctx;
 
+  /**
+   * How often the test scene moves on.
+   */
   unsigned frame_interval_ms;
 
   /**
-   * Stop after this many frames; 0 means run forever.
+   * Stop after this many animation steps; 0 means run forever.
    */
   unsigned max_frames;
 };
 
 /**
- * Run XCSoar on the calling thread.  Returns when #Config::max_frames
- * have been drawn or on a fatal error (which is logged).
+ * Run XCSoar's event loop on the calling thread.  Returns when
+ * #Config::max_frames animation steps have been drawn or on a fatal
+ * error (which is logged).
  *
  * @return false on error
  */
 bool
 Run(const Config &config) noexcept;
+
+enum class PointerAction : uint8_t {
+  DOWN,
+  MOVE,
+  UP,
+};
+
+/**
+ * Pass a touch (or mouse) event to XCSoar, at a position in XCSoar's
+ * screen coordinates.  May be called from any task while Run() is
+ * running; it is ignored before XCSoar's event queue exists.
+ */
+void
+InjectPointer(PointerAction action, int x, int y) noexcept;
 
 } // namespace XCSoarEsp32

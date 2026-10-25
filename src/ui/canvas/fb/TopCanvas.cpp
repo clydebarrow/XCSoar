@@ -5,6 +5,10 @@
 #include "ui/canvas/Canvas.hpp"
 #include "lib/fmt/SystemError.hxx"
 
+#ifdef USE_EXTERNAL_FB
+#include "ui/display/Display.hpp"
+#endif
+
 #ifdef USE_FB
 #include "ui/canvas/memory/Export.hpp"
 #endif
@@ -191,19 +195,6 @@ TopCanvas::CheckResize() noexcept
   return CheckResize(GetNativeSize());
 }
 
-#elif defined(USE_EXTERNAL_FB)
-
-TopCanvas::TopCanvas(UI::Display &_display, PixelSize new_size,
-                     FlipHandler _flip_handler, void *_flip_ctx)
-  :display(_display),
-   flip_handler(_flip_handler), flip_ctx(_flip_ctx)
-{
-  buffer.Allocate(new_size);
-
-  // suppress -Wunused
-  (void)display;
-}
-
 #elif defined(USE_VFB)
 
 TopCanvas::TopCanvas(UI::Display &_display, PixelSize new_size)
@@ -211,8 +202,10 @@ TopCanvas::TopCanvas(UI::Display &_display, PixelSize new_size)
 {
   buffer.Allocate(new_size);
 
+#ifndef USE_EXTERNAL_FB
   // suppress -Wunused
   (void)display;
+#endif
 }
 
 #else
@@ -307,7 +300,7 @@ TopCanvas::Flip()
 #endif /* USE_FB */
 
 #ifdef USE_EXTERNAL_FB
-  flip_handler(buffer, flip_ctx);
+  display.Flip(buffer.data, buffer.pitch);
 #endif
 }
 

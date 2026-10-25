@@ -7,6 +7,12 @@
 
 namespace UI {
 
+#ifdef USE_INJECTED_INPUT
+
+InputEventQueue::InputEventQueue(EventQueue &) noexcept {}
+
+#else
+
 InputEventQueue::InputEventQueue(EventQueue &queue) noexcept
   :
 #ifndef USE_LIBINPUT
@@ -27,12 +33,14 @@ InputEventQueue::InputEventQueue(EventQueue &queue) noexcept
 #endif
 }
 
+#endif
+
 InputEventQueue::~InputEventQueue() noexcept = default;
 
 bool
 InputEventQueue::Generate([[maybe_unused]] Event &event) noexcept
 {
-#ifndef USE_LIBINPUT
+#if !defined(USE_INJECTED_INPUT) && !defined(USE_LIBINPUT)
   event = merge_mouse.Generate();
   if (event.type != Event::Type::NOP)
     return true;

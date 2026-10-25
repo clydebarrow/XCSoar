@@ -62,7 +62,9 @@ class EventQueue final {
   Mutex mutex;
 
   std::queue<Event> events;
+#ifndef ESP_PLATFORM
   std::vector<pid_t> children_to_reap;
+#endif
 
   InjectEvent wake_event{event_loop, BIND_THIS_METHOD(OnWakeUp)};
 
@@ -226,8 +228,10 @@ public:
    */
   void Push(const Event &event) noexcept;
 
+#ifndef ESP_PLATFORM
   /** Take ownership of this child's exit status; UI thread only. */
   void ReapChild(pid_t pid) noexcept;
+#endif
 
   /**
    * Ensure that the next Wait() call finishes by injecting a NOP
@@ -256,7 +260,9 @@ public:
   void Purge(Event::Callback callback, void *ctx) noexcept;
 
 private:
+#ifndef ESP_PLATFORM
   void OnChildExit() noexcept;
+#endif
 
   void OnQuitSignal() noexcept {
     Quit();

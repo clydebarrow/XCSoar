@@ -15,7 +15,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 get_filename_component(XCSOAR_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../.. ABSOLUTE)
 include(${XCSOAR_ROOT}/esp32/Sources.cmake)
 
-xcsoar_fetch_fmt()
+xcsoar_fetch_libraries()
 
 find_package(Freetype REQUIRED)
 
@@ -25,18 +25,26 @@ xcsoar_generate_math_tables(${XCSOAR_ROOT} ${GENERATED_DIR})
 list(TRANSFORM XCSOAR_ESP32_SOURCES PREPEND ${XCSOAR_ROOT}/)
 list(TRANSFORM XCSOAR_ESP32_INCLUDE_DIRS PREPEND ${XCSOAR_ROOT}/)
 
-# font search paths; the ESP32 build uses src/ui/canvas/esp32/Files.cpp
+# font search paths (the ESP32 build uses src/ui/canvas/esp32/Files.cpp)
+# and other host-specific sources
 if(APPLE)
-  set(font_files ${XCSOAR_ROOT}/src/ui/canvas/apple/Files.cpp)
+  set(host_files ${XCSOAR_ROOT}/src/ui/canvas/apple/Files.cpp)
+  # no eventfd(); the event loop wakes up through a pipe
+  list(TRANSFORM XCSOAR_ESP32_SOURCES REPLACE
+    "src/system/EventFD.cxx$" "src/system/EventPipe.cxx")
+  list(APPEND host_files ${XCSOAR_ROOT}/src/io/FileDescriptor.cxx)
 else()
-  set(font_files ${XCSOAR_ROOT}/src/ui/canvas/custom/Files.cpp)
+  set(host_files ${XCSOAR_ROOT}/src/ui/canvas/custom/Files.cpp)
 endif()
 
 add_executable(RunEsp32Host
   main.cpp
-  ${font_files}
+  # the ESP32 has no signals
+  ${XCSOAR_ROOT}/src/event/SignalMonitor.cxx
+  ${host_files}
   ${XCSOAR_ESP32_SOURCES})
 target_include_directories(RunEsp32Host PRIVATE
-  ${XCSOAR_ESP32_INCLUDE_DIRS} ${GENERATED_DIR} ${fmt_SOURCE_DIR}/include)
+  ${XCSOAR_ESP32_INCLUDE_DIRS} ${GENERATED_DIR}
+  ${fmt_SOURCE_DIR}/include ${boost_SOURCE_DIR})
 target_compile_definitions(RunEsp32Host PRIVATE ${XCSOAR_ESP32_DEFINES})
 target_link_libraries(RunEsp32Host PRIVATE Freetype::Freetype)

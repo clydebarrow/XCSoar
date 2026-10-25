@@ -106,6 +106,39 @@ public:
   using SDL::Display::Display;
 };
 
+#elif defined(USE_EXTERNAL_FB)
+
+/**
+ * A display owned by the host application (e.g. ESPHome on an
+ * ESP32), which receives each finished frame from
+ * TopCanvas::Flip().
+ */
+class Display {
+public:
+  /**
+   * @param pixels the frame, 32 bits per pixel in the memory canvas
+   * format; only valid during the call
+   * @param pitch the distance between two rows in bytes
+   */
+  using FlipHandler = void (*)(const void *pixels, unsigned pitch,
+                               void *ctx) noexcept;
+
+private:
+  FlipHandler flip_handler = nullptr;
+  void *flip_ctx = nullptr;
+
+public:
+  void SetFlipHandler(FlipHandler handler, void *ctx) noexcept {
+    flip_handler = handler;
+    flip_ctx = ctx;
+  }
+
+  void Flip(const void *pixels, unsigned pitch) const noexcept {
+    if (flip_handler != nullptr)
+      flip_handler(pixels, pitch, flip_ctx);
+  }
+};
+
 #else
 
 class Display {};

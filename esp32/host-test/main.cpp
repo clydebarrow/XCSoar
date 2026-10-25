@@ -2,8 +2,8 @@
 // Copyright The XCSoar Project
 
 /*
- * Runs XCSoarEsp32::Run() on the host for a few frames and writes the
- * last one to a PPM file.
+ * Runs XCSoarEsp32::Run() on the host for a few frames, injecting
+ * touches, and writes the last frame to a PPM file.
  */
 
 #include "XCSoarEsp32.hpp"
@@ -15,11 +15,34 @@
 static constexpr unsigned WIDTH = 800, HEIGHT = 480;
 
 static std::vector<unsigned char> last_frame;
+static unsigned frame_count;
+
+/* touches, one per frame: a tap on the pause button, then a drag
+   that is still held when the test ends */
+static void
+InjectTouches() noexcept
+{
+  using XCSoarEsp32::InjectPointer;
+  using XCSoarEsp32::PointerAction;
+
+  const unsigned n = frame_count++;
+  if (n == 2)
+    InjectPointer(PointerAction::DOWN, WIDTH - 40, 40);
+  else if (n == 3)
+    InjectPointer(PointerAction::UP, WIDTH - 40, 40);
+  else if (n == 5)
+    InjectPointer(PointerAction::DOWN, 100, 300);
+  else if (n > 5 && n <= 15)
+    InjectPointer(PointerAction::MOVE, 100 + (n - 5) * 30,
+                  300 - (n - 5) * 15);
+}
 
 /* keep the last frame as RGB for the PPM file */
 static void
 FrameReady(const void *pixels, unsigned pitch, void *) noexcept
 {
+  InjectTouches();
+
   last_frame.clear();
   for (unsigned y = 0; y < HEIGHT; ++y) {
     const auto *row = static_cast<const unsigned char *>(pixels) + y * pitch;

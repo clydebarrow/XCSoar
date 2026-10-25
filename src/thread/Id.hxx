@@ -5,6 +5,11 @@
 
 #ifdef _WIN32
 #include <processthreadsapi.h>
+#elif defined(ESP_PLATFORM)
+/* pthread_self() aborts in a FreeRTOS task that was not created
+   through pthreads, such as the main task */
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 #else
 #include <pthread.h>
 #endif
@@ -17,6 +22,8 @@
 class ThreadId {
 #ifdef _WIN32
 	DWORD id;
+#elif defined(ESP_PLATFORM)
+	TaskHandle_t id;
 #else
 	pthread_t id;
 #endif
@@ -29,6 +36,8 @@ public:
 
 #ifdef _WIN32
 	constexpr ThreadId(DWORD _id) noexcept:id(_id) {}
+#elif defined(ESP_PLATFORM)
+	constexpr ThreadId(TaskHandle_t _id) noexcept:id(_id) {}
 #else
 	constexpr ThreadId(pthread_t _id) noexcept:id(_id) {}
 #endif
@@ -36,6 +45,8 @@ public:
 	static constexpr ThreadId Null() noexcept {
 #ifdef _WIN32
 		return 0;
+#elif defined(ESP_PLATFORM)
+		return TaskHandle_t{};
 #else
 		return pthread_t();
 #endif
@@ -53,6 +64,8 @@ public:
 	static const ThreadId GetCurrent() noexcept {
 #ifdef _WIN32
 		return ::GetCurrentThreadId();
+#elif defined(ESP_PLATFORM)
+		return xTaskGetCurrentTaskHandle();
 #else
 		return pthread_self();
 #endif

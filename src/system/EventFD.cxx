@@ -6,10 +6,18 @@
 
 #include <cassert>
 
+#ifdef ESP_PLATFORM
+/* esp_vfs_eventfd accepts no flags; its read() never blocks */
+#include <esp_vfs_eventfd.h>
+using eventfd_t = uint64_t;
+static constexpr int EVENTFD_FLAGS = 0;
+#else
 #include <sys/eventfd.h>
+static constexpr int EVENTFD_FLAGS = EFD_NONBLOCK|EFD_CLOEXEC;
+#endif
 
 EventFD::EventFD()
-	:fd(::eventfd(0, EFD_NONBLOCK|EFD_CLOEXEC))
+	:fd(::eventfd(0, EVENTFD_FLAGS))
 {
 	if (!fd.IsDefined())
 		throw MakeErrno("eventfd() failed");

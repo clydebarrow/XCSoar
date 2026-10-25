@@ -3,7 +3,10 @@
 
 #pragma once
 
-#ifdef USE_LIBINPUT
+#ifdef USE_INJECTED_INPUT
+/* no input devices: the host application injects touches with
+   EventQueue::Inject() */
+#elif defined(USE_LIBINPUT)
 #include "libinput/LibInputHandler.hpp"
 #else
 #include "linux/MergeMouse.hpp"
@@ -11,6 +14,7 @@
 #endif
 
 #include "ui/dim/Point.hpp"
+#include "ui/dim/Size.hpp"
 
 #include <cstdint>
 
@@ -22,7 +26,8 @@ class EventQueue;
 struct Event;
 
 class InputEventQueue final {
-#ifdef USE_LIBINPUT
+#ifdef USE_INJECTED_INPUT
+#elif defined(USE_LIBINPUT)
   LibInputHandler libinput_handler;
 #else
   MergeMouse merge_mouse;
@@ -34,16 +39,18 @@ public:
   explicit InputEventQueue(EventQueue &queue) noexcept;
   ~InputEventQueue() noexcept;
 
-  void SetScreenSize(PixelSize screen_size) noexcept {
-  #ifdef USE_LIBINPUT
+  void SetScreenSize([[maybe_unused]] PixelSize screen_size) noexcept {
+  #ifdef USE_INJECTED_INPUT
+  #elif defined(USE_LIBINPUT)
     libinput_handler.SetScreenSize(screen_size);
   #else
     merge_mouse.SetScreenSize(screen_size);
   #endif
   }
 
-  void SetDisplayOrientation(DisplayOrientation orientation) {
-#ifdef USE_LIBINPUT
+  void SetDisplayOrientation([[maybe_unused]] DisplayOrientation orientation) {
+#ifdef USE_INJECTED_INPUT
+#elif defined(USE_LIBINPUT)
     libinput_handler.SetDisplayOrientation(orientation);
 #else
     merge_mouse.SetDisplayOrientation(orientation);
@@ -59,7 +66,10 @@ public:
   }
 
   bool HasPointer() const noexcept {
-#ifdef USE_LIBINPUT
+#ifdef USE_INJECTED_INPUT
+    /* a touch screen */
+    return false;
+#elif defined(USE_LIBINPUT)
     return libinput_handler.HasPointer();
 #else
     return merge_mouse.HasPointer();
@@ -77,7 +87,9 @@ public:
 #endif
 
   PixelPoint GetMousePosition() const noexcept {
-#ifdef USE_LIBINPUT
+#ifdef USE_INJECTED_INPUT
+    return {};
+#elif defined(USE_LIBINPUT)
     return PixelPoint(libinput_handler.GetX(), libinput_handler.GetY());
 #else
     return merge_mouse.GetPosition();
