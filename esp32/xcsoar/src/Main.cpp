@@ -9,7 +9,6 @@
 #include "ui/canvas/Font.hpp"
 #include "ui/canvas/Pen.hpp"
 #include "ui/canvas/custom/TopCanvas.hpp"
-#include "ui/canvas/memory/Export.hpp"
 #include "ui/display/Display.hpp"
 
 #include <fmt/format.h>
@@ -27,12 +26,10 @@ using std::chrono::steady_clock;
 namespace XCSoarEsp32 {
 
 static void
-FlipToRGB565(ConstImageBuffer<ActivePixelTraits> frame, void *ctx) noexcept
+FlipToHost(ConstImageBuffer<ActivePixelTraits> frame, void *ctx) noexcept
 {
   const auto &config = *static_cast<const Config *>(ctx);
-  CopyFromBGRA(config.frame, config.width * sizeof(*config.frame),
-               sizeof(*config.frame), frame);
-  config.frame_ready(config.ctx);
+  config.frame_ready(frame.data, frame.pitch, config.ctx);
 }
 
 static PixelPoint
@@ -110,7 +107,7 @@ try {
 
   UI::Display display;
   TopCanvas screen(display, PixelSize(config.width, config.height),
-                   FlipToRGB565, const_cast<Config *>(&config));
+                   FlipToHost, const_cast<Config *>(&config));
 
   const auto interval = std::chrono::milliseconds(config.frame_interval_ms);
   auto next = steady_clock::now();

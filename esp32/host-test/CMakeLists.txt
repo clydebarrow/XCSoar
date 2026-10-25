@@ -25,10 +25,16 @@ xcsoar_generate_math_tables(${XCSOAR_ROOT} ${GENERATED_DIR})
 list(TRANSFORM XCSOAR_ESP32_SOURCES PREPEND ${XCSOAR_ROOT}/)
 list(TRANSFORM XCSOAR_ESP32_INCLUDE_DIRS PREPEND ${XCSOAR_ROOT}/)
 
+# font search paths; the ESP32 build uses src/ui/canvas/esp32/Files.cpp
+if(APPLE)
+  set(font_files ${XCSOAR_ROOT}/src/ui/canvas/apple/Files.cpp)
+else()
+  set(font_files ${XCSOAR_ROOT}/src/ui/canvas/custom/Files.cpp)
+endif()
+
 add_executable(RunEsp32Host
   main.cpp
-  # the ESP32 build uses src/ui/canvas/esp32/Files.cpp instead
-  ${XCSOAR_ROOT}/src/ui/canvas/custom/Files.cpp
+  ${font_files}
   ${XCSOAR_ESP32_SOURCES})
 target_include_directories(RunEsp32Host PRIVATE
   ${XCSOAR_ESP32_INCLUDE_DIRS} ${GENERATED_DIR} ${fmt_SOURCE_DIR}/include)

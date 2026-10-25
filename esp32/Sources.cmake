@@ -18,7 +18,6 @@ set(XCSOAR_ESP32_SOURCES
   src/ui/canvas/freetype/Font.cpp
   src/ui/canvas/freetype/Init.cpp
   src/ui/canvas/memory/Canvas.cpp
-  src/ui/canvas/memory/Export.cpp
   src/ui/canvas/memory/RawBitmap.cpp
   src/ui/canvas/memory/SubCanvas.cpp
   src/ui/canvas/memory/VirtualCanvas.cpp

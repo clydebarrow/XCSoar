@@ -14,9 +14,20 @@
 
 static constexpr unsigned WIDTH = 800, HEIGHT = 480;
 
+static std::vector<unsigned char> last_frame;
+
+/* keep the last frame as RGB for the PPM file */
 static void
-FrameReady(void *) noexcept
+FrameReady(const void *pixels, unsigned pitch, void *) noexcept
 {
+  last_frame.clear();
+  for (unsigned y = 0; y < HEIGHT; ++y) {
+    const auto *row = static_cast<const unsigned char *>(pixels) + y * pitch;
+    for (unsigned x = 0; x < WIDTH; ++x) {
+      const unsigned char *bgra = row + x * 4;
+      last_frame.insert(last_frame.end(), {bgra[2], bgra[1], bgra[0]});
+    }
+  }
 }
 
 int
@@ -27,12 +38,9 @@ main(int argc, char **argv)
     return EXIT_FAILURE;
   }
 
-  std::vector<uint16_t> frame(WIDTH * HEIGHT);
-
   const XCSoarEsp32::Config config{
     .width = WIDTH,
     .height = HEIGHT,
-    .frame = frame.data(),
     .frame_ready = FrameReady,
     .ctx = nullptr,
     .frame_interval_ms = 10,
@@ -49,15 +57,7 @@ main(int argc, char **argv)
   }
 
   fprintf(file, "P6\n%u %u\n255\n", WIDTH, HEIGHT);
-  for (const uint16_t pixel : frame) {
-    const unsigned char rgb[3] = {
-      (unsigned char)((pixel >> 11) << 3),
-      (unsigned char)(((pixel >> 5) & 0x3f) << 2),
-      (unsigned char)((pixel & 0x1f) << 3),
-    };
-    fwrite(rgb, sizeof(rgb), 1, file);
-  }
-
+  fwrite(last_frame.data(), 1, last_frame.size(), file);
   fclose(file);
   return EXIT_SUCCESS;
 }

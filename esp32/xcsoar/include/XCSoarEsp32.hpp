@@ -11,7 +11,7 @@
  * Entry points for running XCSoar inside an ESP-IDF application
  * (e.g. an ESPHome component).  The host application owns the
  * display; XCSoar renders into a memory canvas and hands each
- * finished frame over as RGB565.
+ * finished frame over, for the host to convert and show.
  */
 namespace XCSoarEsp32 {
 
@@ -48,17 +48,14 @@ struct Config {
   unsigned width, height;
 
   /**
-   * The RGB565 frame (native byte order, no row padding), owned by
-   * the caller; width * height pixels.
+   * Called on the XCSoar task each time a frame is finished.  The
+   * frame is width * height pixels, 32 bits each, stored as the bytes
+   * blue, green, red, alpha (ARGB8888 read as a little endian
+   * word), with each row starting #pitch bytes after the previous
+   * one.  The pixels are only valid until this function returns.
    */
-  uint16_t *frame;
-
-  /**
-   * Called on the XCSoar task each time a new frame has been
-   * written to #frame.  It must not return until the caller has
-   * finished reading #frame.
-   */
-  void (*frame_ready)(void *ctx) noexcept;
+  void (*frame_ready)(const void *pixels, unsigned pitch,
+                      void *ctx) noexcept;
   void *ctx;
 
   unsigned frame_interval_ms;
