@@ -3,6 +3,7 @@
 
 #include "Host.hpp"
 #include "XCSoarEsp32.hpp"
+#include "ui/canvas/VirtualCanvas.hpp"
 #include "ui/display/Display.hpp"
 #include "ui/event/Globals.hpp"
 #include "ui/event/Queue.hpp"
@@ -30,6 +31,10 @@ void
 ConnectDisplay(const Config &config) noexcept
 {
   UI::Display::SetFlipHandler(FlipToHost, const_cast<Config *>(&config));
+
+  /* the map buffers grow to the full screen in pan mode; allocating
+     them at that size from the start keeps the heap unfragmented */
+  VirtualCanvas::reserve_size = {config.width, config.height};
 }
 
 void
