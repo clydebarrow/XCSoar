@@ -1,0 +1,5 @@
+description: XCSoar glide computer for ESP-IDF applications
+license: GPL-2.0-or-later
+dependencies:
+  idf: ">=5.4"
+  espressif/freetype: "^2.13.3"

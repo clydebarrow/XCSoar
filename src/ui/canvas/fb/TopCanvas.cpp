@@ -191,6 +191,19 @@ TopCanvas::CheckResize() noexcept
   return CheckResize(GetNativeSize());
 }
 
+#elif defined(USE_EXTERNAL_FB)
+
+TopCanvas::TopCanvas(UI::Display &_display, PixelSize new_size,
+                     FlipHandler _flip_handler, void *_flip_ctx)
+  :display(_display),
+   flip_handler(_flip_handler), flip_ctx(_flip_ctx)
+{
+  buffer.Allocate(new_size);
+
+  // suppress -Wunused
+  (void)display;
+}
+
 #elif defined(USE_VFB)
 
 TopCanvas::TopCanvas(UI::Display &_display, PixelSize new_size)
@@ -292,6 +305,10 @@ TopCanvas::Flip()
 #endif
 
 #endif /* USE_FB */
+
+#ifdef USE_EXTERNAL_FB
+  flip_handler(buffer, flip_ctx);
+#endif
 }
 
 #ifdef KOBO

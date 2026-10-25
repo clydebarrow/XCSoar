@@ -123,6 +123,20 @@ class TopCanvas
   uint32_t epd_update_marker;
 #endif // USE_FB
 
+#ifdef USE_EXTERNAL_FB
+public:
+  /**
+   * Receives each finished frame from Flip().  The buffer is only
+   * valid during the call.
+   */
+  using FlipHandler = void (*)(ConstImageBuffer<ActivePixelTraits> frame,
+                               void *ctx) noexcept;
+
+private:
+  const FlipHandler flip_handler;
+  void *const flip_ctx;
+#endif // USE_EXTERNAL_FB
+
 #ifdef KOBO
   /**
    * Runtime flag that can be used to disable dithering at runtime for
@@ -146,6 +160,9 @@ public:
   {
     CreateSurface(native_window);
   }
+#elif defined(USE_EXTERNAL_FB)
+  TopCanvas(UI::Display &_display, PixelSize new_size,
+            FlipHandler _flip_handler, void *_flip_ctx);
 #elif defined(USE_VFB)
   TopCanvas(UI::Display &_display, PixelSize new_size);
 #else
