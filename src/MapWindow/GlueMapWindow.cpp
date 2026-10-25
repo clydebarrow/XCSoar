@@ -250,10 +250,6 @@ GlueMapWindow::QuickRedraw() noexcept
   /* update the Projection */
 
   ++ui_generation;
-
-  /* quickly stretch the existing buffer into the window */
-
-  scale_buffer = 2;
 #endif
 
   Invalidate();

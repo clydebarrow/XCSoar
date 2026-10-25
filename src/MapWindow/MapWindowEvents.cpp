@@ -81,14 +81,11 @@ MapWindow::OnPaint(Canvas &canvas) noexcept
      protected with the mutex */
   const std::scoped_lock lock{mutex};
 
-  if (scale_buffer > 0 && visible_projection.IsValid() &&
-      buffer_projection.IsValid()) {
-    /* while zooming/panning, project the current buffer into the
-       Canvas */
-
-    --scale_buffer;
-
-    /* do the projection */
+  if (visible_projection.IsValid() && buffer_projection.IsValid()) {
+    /* the UI has changed (zoom, pan, resize) since the last
+       DrawThread iteration has started: project the old buffer into
+       the Canvas until the new one is ready, which may take seconds
+       on a slow CPU */
 
     const auto buffer_size = buffer_projection.GetScreenSize();
 
@@ -137,9 +134,7 @@ MapWindow::OnPaint(Canvas &canvas) noexcept
                    {bottom_right.x - top_left.x, bottom_right.y - top_left.y},
                    src, {0, 0}, buffer_size);
   } else
-    /* the UI has changed since the last DrawThread iteration has
-       started: the buffer has invalid data, paint a white window
-       instead */
+    /* no usable buffer yet: paint a white window instead */
     canvas.ClearWhite();
 }
 

@@ -323,12 +323,6 @@ GlueMapWindow::OnMouseUp(PixelPoint p) noexcept
 #endif
 
   case DRAG_PAN:
-#ifndef ENABLE_OPENGL
-    /* allow the use of the stretched last buffer for the next two
-       redraws */
-    scale_buffer = 2;
-#endif
-
 #ifdef ENABLE_OPENGL
     kinetic_x.MouseUp(p.x);
     kinetic_y.MouseUp(p.y);
