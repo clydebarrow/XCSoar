@@ -820,22 +820,25 @@ RasterRenderer::GenerateSlopeImage(unsigned height_scale,
 
         const int dd0 = p22 * int(p31);
         const int dd1 = int(p20) * p32;
-        const double dd2 = double(p20) * double(p31) *
-          double(height_slope_factor);
-        const double num =
-          dd2 * double(sz) + double(dd0) * double(sx) +
-          double(dd1) * double(sy);
-        const double square_mag =
-          double(dd0) * double(dd0) +
-          double(dd1) * double(dd1) +
+        /* float is precise enough for a shading index and has
+           hardware support on targets without a double precision
+           FPU (e.g. ESP32-P4) */
+        const float dd2 = float(p20) * float(p31) *
+          float(height_slope_factor);
+        const float num =
+          dd2 * float(sz) + float(dd0) * float(sx) +
+          float(dd1) * float(sy);
+        const float square_mag =
+          float(dd0) * float(dd0) +
+          float(dd1) * float(dd1) +
           dd2 * dd2;
-        const double mag = sqrt(square_mag);
+        const float mag = std::sqrt(square_mag);
         /* this is a workaround for a SIGFPE (division by zero)
            observed by our users on some Android devices (e.g. Nexus
            7), even though we did our best to make sure that the
            integer arithmetics above can't overflow */
         /* TODO: debug this problem and replace this workaround */
-        const int sval = int(num / std::max(mag, 1.0));
+        const int sval = int(num / std::max(mag, 1.0f));
         const int sindex = (sval - sz) * contrast / 128;
         *p++ = oColorBuf[int(h) + 256 * std::clamp(sindex, -63, 63)];
       } else if (e.IsWater()) {
