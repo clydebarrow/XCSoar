@@ -14,10 +14,6 @@ public:
   FlatGeoPoint point;
   /** Vector representing ray direction and length */
   FlatGeoPoint vector;
-  /** speedups for box intersection test */
-  double fx;
-  /** speedups for box intersection test */
-  double fy;
 
   /**
    * Constructor given start/end locations
@@ -26,9 +22,7 @@ public:
    * @param to End point of ray
    */
   constexpr FlatRay(const FlatGeoPoint &from, const FlatGeoPoint &to) noexcept
-    :point(from), vector(to - from),
-     fx(vector.x != 0 ? 1.0 / vector.x : 0),
-     fy(vector.y != 0 ? 1.0 / vector.y : 0) {}
+    :point(from), vector(to - from) {}
 
   /**
    * Return the length of the ray.

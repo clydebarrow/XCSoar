@@ -52,8 +52,9 @@ FlatBoundingBox::Intersects(const FlatRay& ray) const noexcept
       return false;
   } else {
     // compute intersection t value of ray with near/far plane of slab
-    auto t1 = (lower_left.x - ray.point.x) * ray.fx;
-    auto t2 = (upper_right.x - ray.point.x) * ray.fx;
+    const double fx = 1.0 / ray.vector.x;
+    auto t1 = (lower_left.x - ray.point.x) * fx;
+    auto t2 = (upper_right.x - ray.point.x) * fx;
     // make t1 be intersection with near plane, t2 with far plane
     if (t1 > t2)
       std::swap(t1, t2);
@@ -72,8 +73,9 @@ FlatBoundingBox::Intersects(const FlatRay& ray) const noexcept
       return false;
   } else {
     // compute intersection t value of ray with near/far plane of slab
-    auto t1 = (lower_left.y - ray.point.y) * ray.fy;
-    auto t2 = (upper_right.y - ray.point.y) * ray.fy;
+    const double fy = 1.0 / ray.vector.y;
+    auto t1 = (lower_left.y - ray.point.y) * fy;
+    auto t2 = (upper_right.y - ray.point.y) * fy;
     // make t1 be intersection with near plane, t2 with far plane
     if (t1 > t2)
       std::swap(t1, t2);
