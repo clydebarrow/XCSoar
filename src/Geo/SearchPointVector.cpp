@@ -188,6 +188,13 @@ SearchPointVector::IsInside(const GeoPoint &pt) const noexcept
 }
 
 bool
+SearchPointVector::IsInside(const GeoPoint &pt,
+                            const FlatGeoPoint &flat_pt) const noexcept
+{
+  return PolygonInterior(pt, flat_pt, begin(), end());
+}
+
+bool
 SearchPointVector::IsInside(const FlatGeoPoint &pt) const noexcept
 {
   return PolygonInterior(pt, begin(), end());

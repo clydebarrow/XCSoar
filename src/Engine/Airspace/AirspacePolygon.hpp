@@ -35,6 +35,8 @@ public:
   const GeoPoint GetReferenceLocation() const noexcept override;
   const GeoPoint GetCenter() const noexcept override;
   bool Inside(const GeoPoint &loc) const noexcept override;
+  bool Inside(const GeoPoint &loc,
+              const FlatGeoPoint &flat_loc) const noexcept override;
   AirspaceIntersectionVector Intersects(const GeoPoint &g1,
                                         const GeoPoint &end,
                                         const FlatProjection &projection) const noexcept override;

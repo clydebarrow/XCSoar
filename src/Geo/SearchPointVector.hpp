@@ -57,6 +57,13 @@ public:
   [[gnu::pure]]
   bool IsInside(const GeoPoint &pt) const noexcept;
 
+  /**
+   * The same, faster, given the point's flat location in the
+   * projection the vector was projected with.
+   */
+  [[gnu::pure]]
+  bool IsInside(const GeoPoint &pt, const FlatGeoPoint &flat_pt) const noexcept;
+
   /** Is the given FlatGeoPoint inside the polygon of SearchPoints? */
   [[gnu::pure]]
   bool IsInside(const FlatGeoPoint &pt) const noexcept;

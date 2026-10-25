@@ -58,6 +58,13 @@ AirspacePolygon::Inside(const GeoPoint &loc) const noexcept
   return m_border.IsInside(loc);
 }
 
+bool
+AirspacePolygon::Inside(const GeoPoint &loc,
+                        const FlatGeoPoint &flat_loc) const noexcept
+{
+  return m_border.IsInside(loc, flat_loc);
+}
+
 AirspaceIntersectionVector
 AirspacePolygon::Intersects(const GeoPoint &start, const GeoPoint &end,
                             const FlatProjection &projection) const noexcept
@@ -72,7 +79,7 @@ AirspacePolygon::Intersects(const GeoPoint &start, const GeoPoint &end,
      integer projection the t==0 intersection on that edge is
      silently dropped. Detect that boundary case here. */
   bool start_on_edge = false;
-  const bool inside_geometric = m_border.IsInside(start);
+  const bool inside_geometric = m_border.IsInside(start, ray.point);
 
   for (auto it = m_border.begin(); it + 1 != m_border.end(); ++it) {
     const auto seg_start = it->GetFlatLocation();

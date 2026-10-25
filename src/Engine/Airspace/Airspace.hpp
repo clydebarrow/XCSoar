@@ -65,6 +65,13 @@ public:
   bool IsInside(const GeoPoint &loc) const noexcept;
 
   /**
+   * The same, given also the location in the projection the airspace
+   * was created with.
+   */
+  [[gnu::pure]]
+  bool IsInside(const GeoPoint &loc, const FlatGeoPoint &flat_loc) const noexcept;
+
+  /**
    * Checks whether a line intersects with the airspace, by directing
    * the query to the enclosed concrete airspace.
    *

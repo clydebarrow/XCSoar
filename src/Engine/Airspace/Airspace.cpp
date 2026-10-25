@@ -28,6 +28,14 @@ Airspace::IsInside(const GeoPoint &loc) const noexcept
   return airspace->Inside(loc);
 }
 
+bool
+Airspace::IsInside(const GeoPoint &loc,
+                   const FlatGeoPoint &flat_loc) const noexcept
+{
+  assert(airspace != nullptr);
+  return airspace->Inside(loc, flat_loc);
+}
+
 AirspaceIntersectionVector
 Airspace::Intersects(const GeoPoint &g1, const GeoPoint &end,
                      const FlatProjection &projection) const noexcept

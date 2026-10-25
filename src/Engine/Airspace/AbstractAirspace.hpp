@@ -139,6 +139,16 @@ public:
   virtual bool Inside(const GeoPoint &loc) const noexcept = 0;
 
   /**
+   * The same, given also the location projected with the projection
+   * this airspace was projected with; faster for polygons.
+   */
+  [[gnu::pure]]
+  virtual bool Inside(const GeoPoint &loc,
+                      [[maybe_unused]] const FlatGeoPoint &flat_loc) const noexcept {
+    return Inside(loc);
+  }
+
+  /**
    * Checks whether an observer is inside the airspace altitude range.
    */
   [[gnu::pure]]

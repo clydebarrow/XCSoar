@@ -82,6 +82,36 @@ PolygonInterior(const GeoPoint &P,
   return wn != 0;
 }
 
+bool
+PolygonInterior(const GeoPoint &P, const FlatGeoPoint &flat_p,
+                SearchPointVector::const_iterator begin,
+                SearchPointVector::const_iterator end)
+{
+  if (std::distance(begin, end) < 3)
+    return false;
+
+  int    wn = 0;    // the winding number counter
+
+  for (auto i = begin, next = std::next(i); next != end;
+       i = next, next = std::next(i)) {
+    /* the flat y grows with the latitude, so this edge lies wholly
+       above or below P */
+    const int y0 = i->GetFlatLocation().y, y1 = next->GetFlatLocation().y;
+    if ((y0 > flat_p.y && y1 > flat_p.y) || (y0 < flat_p.y && y1 < flat_p.y))
+      continue;
+
+    if (i->GetLocation().latitude <= P.latitude) {
+      if (next->GetLocation().latitude > P.latitude)
+        if (isLeft(i->GetLocation(), next->GetLocation(), P) > 0)
+          ++wn;
+    } else {
+      if (next->GetLocation().latitude <= P.latitude)
+        if (isLeft(i->GetLocation(), next->GetLocation(), P) < 0)
+          --wn;
+    }
+  }
+  return wn != 0;
+}
 
 bool
 PolygonInterior(const FlatGeoPoint &P,

@@ -291,8 +291,8 @@ Airspaces::QueryInside(const GeoPoint &loc) const noexcept
 
   const auto _begin =
     airspace_tree.qbegin(bgi::intersects(box) &&
-                         bgi::satisfies([&loc](const Airspace &as){
-                             return as.IsInside(loc);
+                         bgi::satisfies([&loc, flat_location](const Airspace &as){
+                             return as.IsInside(loc, flat_location);
                            }));
 
   return {_begin, airspace_tree.qend()};
