@@ -10,6 +10,11 @@
 #include "java/Global.hxx"
 #endif
 
+#ifdef ESP_PLATFORM
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#endif
+
 #include <cassert>
 #include <cstddef>
 
@@ -128,6 +133,15 @@ Thread::ThreadProc(void *p) noexcept
 
   if (thread->name != nullptr)
     SetThreadName(thread->name);
+
+#ifdef ESP_PLATFORM
+  /* SetLowPriority() and SetIdlePriority() do nothing here, and
+     every thread but the main (UI) thread works in the background:
+     run one level below the main thread, so the UI stays responsive
+     while drawing and calculating */
+  if (const UBaseType_t priority = uxTaskPriorityGet(nullptr); priority > 1)
+    vTaskPrioritySet(nullptr, priority - 1);
+#endif
 
   thread->Run();
 
