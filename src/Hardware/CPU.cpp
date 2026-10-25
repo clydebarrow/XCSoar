@@ -6,6 +6,10 @@
 #include "util/NumberParser.hpp"
 #include "util/StringStrip.hxx"
 
+#ifdef ESP_PLATFORM
+#include <sdkconfig.h>
+#endif
+
 #include <atomic>
 
 #ifdef HAVE_CPU_FREQUENCY
@@ -57,6 +61,8 @@ ReadMaxCPUFrequencyKHz() noexcept
     return 0;
 
   return value;
+#elif defined(ESP_PLATFORM)
+  return CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ * 1000;
 #else
   return 0;
 #endif
