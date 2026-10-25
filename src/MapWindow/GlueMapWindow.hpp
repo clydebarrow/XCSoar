@@ -140,10 +140,11 @@ private:
   KineticManager kinetic_x{std::chrono::milliseconds{700}};
   KineticManager kinetic_y{std::chrono::milliseconds{700}};
   UI::PeriodicTimer kinetic_timer{[this]{ OnKineticTimer(); }};
+#endif
 
   /**
-   * Re-render terrain at higher OpenGL quantisation after the user
-   * stops interacting on slow CPUs (see GetQuantisation()).
+   * Re-render terrain at higher quantisation after the user stops
+   * interacting on slow CPUs (see GetQuantisation()).
    */
   UI::Timer terrain_quantisation_timer{
     [this]{ OnTerrainQuantisationTimer(); }};
@@ -153,7 +154,6 @@ private:
    * PollTerrainQuantisationIdle() does not repaint every tick.
    */
   bool terrain_quantisation_idle_done = false;
-#endif
 
   /** flag to indicate if the MapItemList should be shown on mouse up */
   bool arm_mapitem_list = false;
@@ -358,14 +358,12 @@ public:
   void SetHudMargins(unsigned left, unsigned top,
                      unsigned right, unsigned bottom) noexcept override;
 
-#ifdef ENABLE_OPENGL
   /**
    * Re-evaluate idle terrain quantisation; called from the main timer
    * so simulator startup and async tile loads still refine without
    * a GNSS-driven redraw.
    */
   void PollTerrainQuantisationIdle() noexcept;
-#endif
 
   /**
    * Trigger a deferred redraw.  It will occur in the main thread
@@ -592,7 +590,7 @@ private:
   void OnKineticTimer() noexcept;
   void CancelZoomAnimation() noexcept;
   void OnZoomTimer() noexcept;
+#endif
   void NoteTerrainQuantisationUserActivity() noexcept;
   void OnTerrainQuantisationTimer() noexcept;
-#endif
 };

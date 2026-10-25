@@ -32,7 +32,6 @@ class RasterRenderer {
   /** screen dimensions in coarse pixels */
   unsigned quantisation_pixels = 2;
 
-#ifdef ENABLE_OPENGL
   /**
    * The value of #quantisation_pixels that was used in the last
    * ScanMap() call.
@@ -50,7 +49,6 @@ class RasterRenderer {
    * RASP raises it to suppress the step to 1.
    */
   unsigned min_quantisation_pixels = 1;
-#endif
 
   /**
    * Step size used for slope calculations.  Slope shading is disabled
@@ -158,9 +156,7 @@ public:
    */
   void SetQuantisationPixels(unsigned q) noexcept {
     quantisation_pixels = q < 1 ? 1u : q;
-#ifdef ENABLE_OPENGL
     fixed_quantisation = true;
-#endif
   }
 
   /**
@@ -170,6 +166,7 @@ public:
   void SetMinQuantisationPixels(unsigned q) noexcept {
     min_quantisation_pixels = q < 1 ? 1u : q;
   }
+#endif
 
   /**
    * Calculate a new #quantisation_pixels value.
@@ -179,6 +176,7 @@ public:
    */
   bool UpdateQuantisation() noexcept;
 
+#ifdef ENABLE_OPENGL
   const GeoBounds &GetBounds() const noexcept {
     return bounds;
   }

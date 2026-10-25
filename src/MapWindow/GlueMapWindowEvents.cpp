@@ -54,8 +54,8 @@ GlueMapWindow::OnDestroy() noexcept
 #ifdef ENABLE_OPENGL
   kinetic_timer.Cancel();
   CancelZoomAnimation();
-  terrain_quantisation_timer.Cancel();
 #endif
+  terrain_quantisation_timer.Cancel();
 
   map_item_timer.Cancel();
 
@@ -169,9 +169,7 @@ GlueMapWindow::OnMouseMove(PixelPoint p, unsigned keys) noexcept
     /* invoke PaintWindow's Invalidate() implementation instead of
        DoubleBufferWindow's in order to reuse the buffered map */
     PaintWindow::Invalidate();
-#ifdef ENABLE_OPENGL
     NoteTerrainQuantisationUserActivity();
-#endif
     return true;
   }
 

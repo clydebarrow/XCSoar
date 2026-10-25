@@ -160,11 +160,9 @@ GlueMapWindow::ResumeThreads() noexcept
 void
 GlueMapWindow::InjectRedraw() noexcept
 {
-#ifdef ENABLE_OPENGL
   /* async tile/topography loads may arrive after the idle upgrade
      timer has already fired (common in simulator startup) */
   terrain_quantisation_idle_done = false;
-#endif
 
   redraw_notify.SendNotification();
 }
@@ -200,9 +198,7 @@ GlueMapWindow::FullRedraw() noexcept
 
   DeferRedraw();
 
-#ifdef ENABLE_OPENGL
   NoteTerrainQuantisationUserActivity();
-#endif
 }
 
 void
@@ -258,12 +254,9 @@ GlueMapWindow::QuickRedraw() noexcept
   /* we suppose that the operation will need a full redraw later, so
      trigger that now */
   DeferRedraw();
-#else
-  NoteTerrainQuantisationUserActivity();
 #endif
+  NoteTerrainQuantisationUserActivity();
 }
-
-#ifdef ENABLE_OPENGL
 
 /** Must match the steps in RasterRenderer::GetQuantisation(). */
 static constexpr auto TERRAIN_QUANTISATION_IDLE_STEP =
@@ -312,5 +305,3 @@ GlueMapWindow::OnTerrainQuantisationTimer() noexcept
   else
     terrain_quantisation_idle_done = true;
 }
-
-#endif

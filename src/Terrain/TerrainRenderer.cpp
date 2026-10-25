@@ -351,15 +351,14 @@ bool
 TerrainRenderer::Generate(const WindowProjection &map_projection,
                           const Angle sunazimuth)
 {
-#ifdef ENABLE_OPENGL
   /* Call once — the helper mutates quantisation_pixels. */
   const bool quantisation_improved = raster_renderer.UpdateQuantisation();
+#ifdef ENABLE_OPENGL
   raster_renderer.SetSunFromAzimuth(sunazimuth, settings.brightness,
                                     settings.contrast);
   const bool sun_ok = raster_renderer.IsShaderHillshade() ||
     sunazimuth.CompareRoughly(last_sun_azimuth);
 #else
-  constexpr bool quantisation_improved = false;
   const bool sun_ok = sunazimuth.CompareRoughly(last_sun_azimuth);
 #endif
 

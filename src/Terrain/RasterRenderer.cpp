@@ -203,29 +203,35 @@ RasterRenderer::~RasterRenderer() noexcept
   delete[] contour_pending;
 }
 
-#ifdef ENABLE_OPENGL
-
 [[gnu::pure]]
 static unsigned
 GetQuantisation() noexcept
 {
+#ifdef ENABLE_OPENGL
+  /* full resolution when idle */
+  constexpr unsigned idle = 1;
+#else
+  /* the software renderer always samples every second pixel */
+  constexpr unsigned idle = 2;
+#endif
+
   /* E-paper keeps every swapped frame, so the coarse facets must
      never appear.  Fast hosts shade on the GPU and only scan the
      strip that enters during a pan, so the idle ladder is not
      needed there either. */
   if (HasEPaper() || !IsSlowCPU())
-    return 1;
+    return idle;
 
   if (IsUserIdle(1500))
     /* full terrain resolution when the user stops interacting */
-    return 1;
+    return idle;
   else if (IsUserIdle(750))
     /* reduced terrain resolution when the user has interacted with
        XCSoar recently */
-    return 2;
+    return idle + 1;
   else
     /* the user is actively operating XCSoar: reduce UI latency */
-    return Layout::FastScale(2);
+    return std::max(idle * 2, Layout::FastScale(2u));
 }
 
 bool
@@ -239,6 +245,8 @@ RasterRenderer::UpdateQuantisation() noexcept
   quantisation_pixels = std::max(GetQuantisation(), min_quantisation_pixels);
   return quantisation_pixels < last_quantisation_pixels;
 }
+
+#ifdef ENABLE_OPENGL
 
 const GLTexture &
 RasterRenderer::BindAndGetTexture() const noexcept
@@ -487,6 +495,7 @@ RasterRenderer::ScanMap(const RasterMap &map,
 #else
   (void)force_full;
   height_matrix.Fill(map, projection, quantisation_pixels, true);
+  last_quantisation_pixels = quantisation_pixels;
 
   ClampQuantisationEffectiveToMatrix(quantisation_effective,
                                      height_matrix.GetSize());

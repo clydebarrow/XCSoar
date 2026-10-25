@@ -1547,10 +1547,8 @@ MainWindow::RunTimer() noexcept
 
   ProcessTimer();
 
-#ifdef ENABLE_OPENGL
   if (GlueMapWindow *m = GetMapIfActive())
     m->PollTerrainQuantisationIdle();
-#endif
 
   UpdateGaugeVisibility();
 
