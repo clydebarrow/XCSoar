@@ -7,6 +7,9 @@
 
 #include <fmt/format.h>
 
+#include <cstdio>
+#include <cstdlib>
+#include <exception>
 #include <string>
 
 /* XCSoar's main(), see src/XCSoar.cpp */
@@ -15,9 +18,31 @@ XCSoarMain(int argc, char **argv);
 
 namespace XCSoarEsp32 {
 
+/**
+ * Log the exception that is about to end the program: the ESP32
+ * panic handler only shows where std::terminate() was called.
+ */
+[[noreturn]] static void
+LogTerminate() noexcept
+{
+  if (auto e = std::current_exception()) {
+    try {
+      std::rethrow_exception(e);
+    } catch (const std::exception &e) {
+      fprintf(stderr, "XCSoar: uncaught exception: %s\n", e.what());
+    } catch (...) {
+      fprintf(stderr, "XCSoar: uncaught exception\n");
+    }
+  }
+
+  abort();
+}
+
 bool
 Run(const Config &config) noexcept
 {
+  std::set_terminate(LogTerminate);
+
   /* the calling thread is XCSoar's main thread */
   InitThreadDebug();
   ConnectDisplay(config);

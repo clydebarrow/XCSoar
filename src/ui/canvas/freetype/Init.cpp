@@ -23,6 +23,15 @@
 #include <vector>
 #endif
 
+#ifdef ESP_PLATFORM
+#include "io/FileMapping.hpp"
+#include "system/Path.hpp"
+
+#include <forward_list>
+#include <string>
+#include <utility>
+#endif
+
 namespace FreeType {
 
 #ifdef KOBO
@@ -45,6 +54,13 @@ Deinitialise()
   FT_Done_FreeType(ft_library);
 }
 
+const char *
+ErrorString(int error) noexcept
+{
+  const char *s = FT_Error_String(error);
+  return s != nullptr ? s : "FreeType error";
+}
+
 #ifdef _WIN32
 
 /**
@@ -60,6 +76,31 @@ FreeFaceFileBuffer(void *object)
 
 #endif
 
+#ifdef ESP_PLATFORM
+
+/**
+ * The font files loaded so far.  Every face keeps its file open, and
+ * XCSoar loads a face per font size, more than a microcontroller can
+ * have files open; so each file is read once and its faces are made
+ * from memory.  Only called from the main thread.
+ */
+static std::forward_list<std::pair<std::string, FileMapping>> font_files;
+
+static std::span<const std::byte>
+LoadFontFile(const char *path)
+{
+  for (const auto &[file_path, mapping] : font_files)
+    if (file_path == path)
+      return mapping;
+
+  font_files.emplace_front(std::piecewise_construct,
+                           std::forward_as_tuple(path),
+                           std::forward_as_tuple(Path(path)));
+  return font_files.front().second;
+}
+
+#endif
+
 FT_Face
 Load(const char *path)
 {
@@ -68,7 +109,15 @@ Load(const char *path)
 
   FT_Face face;
 
-#ifdef _WIN32
+#ifdef ESP_PLATFORM
+  const auto data = LoadFontFile(path);
+  FT_Error error = FT_New_Memory_Face(ft_library,
+                                      (const FT_Byte *)data.data(),
+                                      (FT_Long)data.size(), 0, &face);
+  if (error)
+    throw FmtRuntimeError("Failed to load font {}: {} ({})",
+                          path, ErrorString(error), error);
+#elif defined(_WIN32)
   /* FT_New_Face() uses CRT open() (ANSI); load via _wfopen into a
      memory face so UTF-8 font paths work. */
   FILE *file = OpenPathFile(Path(path), "rb");
@@ -99,8 +148,8 @@ Load(const char *path)
                                       0, &face);
   if (error) {
     delete buffer;
-    throw FmtRuntimeError("Failed to load font {}: {}",
-                          path, FT_Error_String(error));
+    throw FmtRuntimeError("Failed to load font {}: {} ({})",
+                          path, ErrorString(error), error);
   }
 
   face->generic.data = buffer;
@@ -108,8 +157,8 @@ Load(const char *path)
 #else
   FT_Error error = FT_New_Face(ft_library, path, 0, &face);
   if (error)
-    throw FmtRuntimeError("Failed to load font {}: {}",
-                          path, FT_Error_String(error));
+    throw FmtRuntimeError("Failed to load font {}: {} ({})",
+                          path, ErrorString(error), error);
 #endif
 
   return face;

@@ -31,4 +31,13 @@ Deinitialise();
 FT_Face
 Load(const char *path);
 
+/**
+ * Describe a FreeType error code.  Unlike FT_Error_String(), this
+ * never returns nullptr, which it does when FreeType was built
+ * without error strings.
+ */
+[[gnu::const]]
+const char *
+ErrorString(int error) noexcept;
+
 } // namespace FreeType

@@ -153,8 +153,8 @@ Font::LoadFile(const char *file, unsigned ptsize, [[maybe_unused]] bool bold, [[
   FT_Error error = ::FT_Set_Pixel_Sizes(new_face, 0, ptsize);
   if (error) {
     ::FT_Done_Face(new_face);
-    throw FmtRuntimeError("Failed to initialise font {}: {}",
-                          file, FT_Error_String(error));
+    throw FmtRuntimeError("Failed to initialise font {}: {} ({})",
+                          file, FreeType::ErrorString(error), error);
   }
 
   const FT_Fixed y_scale = new_face->size->metrics.y_scale;
