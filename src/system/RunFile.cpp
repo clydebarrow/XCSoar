@@ -90,7 +90,8 @@ RunFileIOS(NSURL *url) noexcept
 
 #ifdef ANDROID
 // replaced by NativeView::OpenWaypointFile()
-#elif defined(HAVE_POSIX) && !defined(_WIN32) && !defined(KOBO)
+#elif defined(HAVE_POSIX) && !defined(_WIN32) && !defined(KOBO) && \
+  !defined(ESP_PLATFORM)
 
 #include "Process.hpp"
 

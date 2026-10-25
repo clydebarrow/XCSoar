@@ -2,6 +2,7 @@
 // Copyright The XCSoar Project
 
 #include "XCSoarEsp32.hpp"
+#include "Host.hpp"
 #include "Look/FontDescription.hpp"
 #include "ui/canvas/Canvas.hpp"
 #include "ui/canvas/Color.hpp"
@@ -9,14 +10,12 @@
 #include "ui/canvas/Pen.hpp"
 #include "ui/event/Globals.hpp"
 #include "ui/event/PeriodicTimer.hpp"
-#include "ui/event/poll/Queue.hpp"
 #include "ui/window/Init.hpp"
 #include "ui/window/SingleWindow.hpp"
 
 #include <fmt/format.h>
 
 #include <array>
-#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <exception>
@@ -229,40 +228,11 @@ protected:
   }
 };
 
-static void
-FlipToHost(const void *pixels, unsigned pitch, void *ctx) noexcept
-{
-  const auto &config = *static_cast<const Config *>(ctx);
-  config.frame_ready(pixels, pitch, config.ctx);
-}
-
-/**
- * The queue that InjectPointer() writes to, while Run() is running.
- */
-static std::atomic<UI::EventQueue *> injection_queue{nullptr};
-
-void
-InjectPointer(PointerAction action, int x, int y) noexcept
-{
-  UI::EventQueue *queue = injection_queue.load();
-  if (queue == nullptr)
-    return;
-
-  static constexpr UI::Event::Type types[] = {
-    UI::Event::MOUSE_DOWN,
-    UI::Event::MOUSE_MOTION,
-    UI::Event::MOUSE_UP,
-  };
-
-  queue->Inject(UI::Event(types[unsigned(action)], PixelPoint(x, y)));
-}
-
 bool
-Run(const Config &config) noexcept
+RunDemo(const Config &config) noexcept
 try {
+  ConnectDisplay(config);
   ScreenGlobalInit screen_init;
-  screen_init.GetDisplay().SetFlipHandler(FlipToHost,
-                                          const_cast<Config *>(&config));
 
   Font big_font, small_font;
   big_font.Load(FontDescription(config.height / 12, true));
@@ -273,9 +243,7 @@ try {
     window.Create("XCSoar", PixelSize(config.width, config.height));
     window.Start();
 
-    injection_queue = &screen_init.GetEventQueue();
     window.RunEventLoop();
-    injection_queue = nullptr;
   }
 
   big_font.Destroy();

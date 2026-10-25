@@ -12,8 +12,11 @@ sub binary_to_c($$$$$) {
     print $output_src_fh "#include <stddef.h>\n";
     print $output_src_fh "#include <stdint.h>\n";
     print $output_src_fh "asm(\n";
+    # RESOURCE_SECTION puts the data elsewhere, e.g. ".section .rodata"
+    # to keep it in flash on a microcontroller
+    my $section = $ENV{RESOURCE_SECTION} // '.data';
+    print $output_src_fh "\"$section\\n\"\n";
     print $output_src_fh "\".p2align 3\\n\"\n";
-    print $output_src_fh "\".data\\n\"\n";;
     print $output_src_fh "\"$array_var_name:\\n\"\n";
     print $output_src_fh "\"_$array_var_name:\\n\"\n";
     print $output_src_fh "\".globl $array_var_name\\n\"\n";

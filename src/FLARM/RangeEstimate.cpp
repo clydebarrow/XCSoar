@@ -278,8 +278,8 @@ LoadSector(FlarmRangeEstimate &estimate, const char *p) noexcept
       highest = b;
 
   if (highest == FlarmRangeEstimate::BINS ||
-      std::min(sector.maximum / FlarmRangeEstimate::BIN_WIDTH,
-               FlarmRangeEstimate::BINS - 1) != highest)
+      std::min<unsigned>(sector.maximum / FlarmRangeEstimate::BIN_WIDTH,
+                         FlarmRangeEstimate::BINS - 1) != highest)
     return;
 
   sector.count = sum;

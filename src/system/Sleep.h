@@ -7,6 +7,17 @@
 
 #include <synchapi.h>
 
+#elif defined(ESP_PLATFORM)
+
+/* ESP-IDF has no nanosleep() */
+#include <unistd.h>
+
+static inline void
+Sleep(unsigned ms) noexcept
+{
+  usleep(ms * 1000);
+}
+
 #else /* !_WIN32 */
 
 #include <time.h>

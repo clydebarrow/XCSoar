@@ -7,7 +7,8 @@
  * in waypoint details (file= entries). On Android, these are handled via
  * ContentProvider (FileProvider.cpp) instead of RunFile(). */
 #if defined(ANDROID) || \
-  (defined(HAVE_POSIX) && !defined(_WIN32) && !defined(KOBO))
+  (defined(HAVE_POSIX) && !defined(_WIN32) && !defined(KOBO) && \
+   !defined(ESP_PLATFORM))
 #define HAVE_RUN_FILE
 #endif
 

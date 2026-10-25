@@ -72,7 +72,9 @@ Profile::Load(const ProfileMap &map, WeGlideSettings &settings)
 {
   map.Get(ProfileKeys::WeGlideEnabled, settings.enabled);
   map.Get(ProfileKeys::WeGlideAutomaticUpload, settings.automatic_upload);
-  map.Get(ProfileKeys::WeGlidePilotID, settings.pilot_id);
+  /* uint32_t is unsigned long on some targets */
+  if (unsigned pilot_id; map.Get(ProfileKeys::WeGlidePilotID, pilot_id))
+    settings.pilot_id = pilot_id;
 
   const char *date = map.Get(ProfileKeys::WeGlidePilotBirthDate);
   if (date != nullptr) {

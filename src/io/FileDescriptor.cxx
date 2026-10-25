@@ -15,7 +15,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#ifndef _WIN32
+#ifdef ESP_PLATFORM
+#include <sys/poll.h>
+#elif !defined(_WIN32)
 #include <poll.h>
 #endif
 

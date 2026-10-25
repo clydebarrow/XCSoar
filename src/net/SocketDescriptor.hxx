@@ -191,7 +191,8 @@ public:
 	[[nodiscard]]
 	bool CreateNonBlock(int domain, int type, int protocol) noexcept;
 
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(ESP_PLATFORM)
+	/* lwIP (ESP-IDF) has no socketpair() */
 	[[nodiscard]]
 	static bool CreateSocketPair(int domain, int type, int protocol,
 				     SocketDescriptor &a,

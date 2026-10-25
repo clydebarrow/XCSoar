@@ -21,13 +21,13 @@ public:
 	/**
 	 * Initialize an instance with "nil".
 	 */
-	explicit Value(lua_State *_L):L(_L) {}
+	explicit Value(lua_State *_state):L(_state) {}
 
 	/**
 	 * Initialize an instance with an object on the stack.
 	 */
 	template<typename V>
-	Value(lua_State *_L, V &&value):L(_L) {
+	Value(lua_State *_state, V &&value):L(_state) {
 		Set(std::forward<V>(value));
 	}
 

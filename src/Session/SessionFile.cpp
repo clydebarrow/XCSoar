@@ -107,7 +107,8 @@ WriteChecklist(ProfileMap &map, const SessionState &state) noexcept
     char ticks_key[32];
     ChecklistKey(sum_key, sizeof(sum_key), i, "Sum");
     ChecklistKey(ticks_key, sizeof(ticks_key), i, "Ticks");
-    map.Set(sum_key, page.sum);
+    /* uint32_t is unsigned long on some targets */
+    map.Set(sum_key, unsigned(page.sum));
     map.Set(ticks_key, page.ticks);
   }
 }

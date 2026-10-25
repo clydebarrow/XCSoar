@@ -41,9 +41,19 @@ GetCurrentTimeZoneOffset() noexcept
   if (localtime_r(&t, &tm) == nullptr)
     return 0;
 
+#ifdef ESP_PLATFORM
+  /* newlib has no tm_gmtoff: read the UTC time as local time, which
+     gives a time that is too early by the offset */
+  struct tm utc;
+  if (gmtime_r(&t, &utc) == nullptr)
+    return 0;
+  utc.tm_isdst = tm.tm_isdst;
+  return (int)(t - mktime(&utc));
+#else
   /* tm_gmtoff is a BSD extension which is available on all of our
      POSIX targets (glibc, Bionic, macOS); it already includes the
      daylight saving time correction */
   return (int)tm.tm_gmtoff;
+#endif
 #endif
 }

@@ -5,6 +5,7 @@
 
 #define HAVE_TCP
 
-#ifdef HAVE_POSIX
+/* lwIP (ESP-IDF) has no local sockets */
+#if defined(HAVE_POSIX) && !defined(ESP_PLATFORM)
 #define HAVE_UN
 #endif

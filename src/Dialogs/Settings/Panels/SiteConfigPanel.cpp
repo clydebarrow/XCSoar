@@ -166,8 +166,10 @@ SiteConfigPanel::Save(bool &_changed) noexcept
   std::string new_repos = old_repos;
   UserRepositoriesListChanged = SaveValue(
       UserRepositoriesList, ProfileKeys::UserRepositoriesList, new_repos);
+#ifdef HAVE_DOWNLOAD_MANAGER
   if (UserRepositoriesListChanged)
     PurgeChangedUserRepositoryFiles(old_repos.c_str(), new_repos.c_str());
+#endif
 
   changed = WaypointFileChanged || AirfieldFileChanged ||
             AirspaceFileChanged || MapFileChanged || FlarmFileChanged ||

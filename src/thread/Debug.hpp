@@ -5,7 +5,7 @@
 
 #ifdef NDEBUG
 
-#ifdef ANDROID
+#if defined(ANDROID) || defined(ESP_PLATFORM)
 static inline void
 InitThreadDebug()
 {
@@ -28,7 +28,7 @@ LeaveDrawThread()
 
 #else /* !NDEBUG */
 
-#ifdef ANDROID
+#if defined(ANDROID) || defined(ESP_PLATFORM)
 void
 InitThreadDebug();
 #endif

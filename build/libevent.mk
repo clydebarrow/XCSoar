@@ -21,6 +21,10 @@ ifeq ($(TARGET),ANDROID)
 EVENT_SOURCES += \
 	$(SRC)/ui/event/android/Loop.cpp \
 	$(SRC)/ui/event/android/Queue.cpp
+else ifeq ($(TARGET_IS_ESP32),y)
+# the host application injects touches with EventQueue::Inject()
+EVENT_SOURCES += $(SRC)/ui/event/poll/InputQueue.cpp
+CONSOLE_CPPFLAGS = -DUSE_INJECTED_INPUT
 else ifeq ($(VFB),y)
 VFB_CPPFLAGS = -DNON_INTERACTIVE
 else ifeq ($(USE_X11),y)

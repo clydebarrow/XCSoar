@@ -66,11 +66,12 @@ main(int argc, char **argv)
     .height = HEIGHT,
     .frame_ready = FrameReady,
     .ctx = nullptr,
+    .data_path = nullptr,
     .frame_interval_ms = 10,
     .max_frames = 30,
   };
 
-  if (!XCSoarEsp32::Run(config))
+  if (!XCSoarEsp32::RunDemo(config))
     return EXIT_FAILURE;
 
   FILE *file = fopen(argv[1], "wb");

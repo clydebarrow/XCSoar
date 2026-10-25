@@ -25,6 +25,46 @@
 #include <sys/un.h>
 #endif
 
+#ifdef ESP_PLATFORM
+#include <arpa/inet.h>
+#include <cstdio>
+#endif
+
+#ifndef NI_MAXHOST
+#define NI_MAXHOST 1025
+#endif
+
+#ifndef NI_MAXSERV
+#define NI_MAXSERV 32
+#endif
+
+/**
+ * Format the numeric host and port of an address.
+ *
+ * @return 0 on success
+ */
+static int
+NumericNameInfo(SocketAddress address, char *host, std::size_t host_size,
+		char *serv, std::size_t serv_size) noexcept
+{
+#ifdef ESP_PLATFORM
+	/* lwIP has no getnameinfo() */
+	if (address.GetFamily() != AF_INET)
+		return -1;
+
+	const auto &in = *(const struct sockaddr_in *)address.GetAddress();
+	if (inet_ntop(AF_INET, &in.sin_addr, host, host_size) == nullptr)
+		return -1;
+
+	snprintf(serv, serv_size, "%u", unsigned(ntohs(in.sin_port)));
+	return 0;
+#else
+	return getnameinfo(address.GetAddress(), address.GetSize(),
+			   host, host_size, serv, serv_size,
+			   NI_NUMERICHOST | NI_NUMERICSERV);
+#endif
+}
+
 #ifdef HAVE_UN
 
 static std::string
@@ -68,9 +108,8 @@ ToString(SocketAddress address) noexcept
 #endif
 
 	char host[NI_MAXHOST], serv[NI_MAXSERV];
-	int ret = getnameinfo(address.GetAddress(), address.GetSize(),
-			      host, sizeof(host), serv, sizeof(serv),
-			      NI_NUMERICHOST | NI_NUMERICSERV);
+	int ret = NumericNameInfo(address, host, sizeof(host),
+				  serv, sizeof(serv));
 	if (ret != 0)
 		return "unknown";
 
@@ -106,9 +145,8 @@ HostToString(SocketAddress address) noexcept
 #endif
 
 	char host[NI_MAXHOST], serv[NI_MAXSERV];
-	int ret = getnameinfo(address.GetAddress(), address.GetSize(),
-			      host, sizeof(host), serv, sizeof(serv),
-			      NI_NUMERICHOST|NI_NUMERICSERV);
+	int ret = NumericNameInfo(address, host, sizeof(host),
+				  serv, sizeof(serv));
 	if (ret != 0)
 		return "unknown";
 

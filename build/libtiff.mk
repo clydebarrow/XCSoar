@@ -1,6 +1,8 @@
 # GeoTIFF-backed raster overlays are available on all non-Kobo targets.
 ifeq ($(TARGET_IS_KOBO),y)
 GEOTIFF = n
+else ifeq ($(TARGET_IS_ESP32),y)
+GEOTIFF = n
 else ifeq ($(TARGET_IS_DARWIN),y)
 GEOTIFF ?= y
 else ifeq ($(TARGET),PC)

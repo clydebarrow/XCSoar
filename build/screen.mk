@@ -13,6 +13,9 @@ endif
 ifeq ($(TARGET_IS_KOBO),y)
 CANVAS_FILES_CPP = $(CANVAS_SRC_DIR)/kobo/Files.cpp
 endif
+ifeq ($(TARGET_IS_ESP32),y)
+CANVAS_FILES_CPP = $(CANVAS_SRC_DIR)/esp32/Files.cpp
+endif
 ifeq ($(HAVE_WIN32)$(FREETYPE),yy)
 CANVAS_FILES_CPP = $(CANVAS_SRC_DIR)/windows/Files.cpp
 endif
@@ -197,6 +200,10 @@ SCREEN_SOURCES += \
 	$(WINDOW_SRC_DIR)/fb/Window.cpp \
 	$(WINDOW_SRC_DIR)/fb/SingleWindow.cpp
 FB_CPPFLAGS = -DUSE_VFB
+ifeq ($(TARGET_IS_ESP32),y)
+# each frame goes to the host application's display
+FB_CPPFLAGS += -DUSE_EXTERNAL_FB
+endif
 else ifeq ($(USE_FB),y)
 SCREEN_SOURCES += $(SCREEN_CUSTOM_SOURCES_IMG)
 SCREEN_SOURCES += \

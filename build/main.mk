@@ -837,6 +837,9 @@ endif
 
 ifeq ($(HAVE_PCM_PLAYER),y)
 XCSOAR_SOURCES += $(SRC)/Audio/VarioGlue.cpp
+else
+# GaugeVario needs AudioVarioGlue::UsesSTF() without audio, too
+XCSOAR_SOURCES += $(SRC)/Audio/VarioAudioValue.cpp
 endif
 
 # Installed system tools and selected systemd unit controls for Linux.

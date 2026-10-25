@@ -366,6 +366,10 @@ ifeq ($(TARGET_IS_ANDROID),n)
 
 $(TARGET_OUTPUT_DIR)/resources.c: export TARGET_IS_ANDROID:=$(TARGET_IS_ANDROID)
 $(TARGET_OUTPUT_DIR)/resources.c: export ENABLE_OPENGL:=$(OPENGL)
+ifeq ($(TARGET_IS_ESP32),y)
+# internal RAM is far too small for the resources
+$(TARGET_OUTPUT_DIR)/resources.c: export RESOURCE_SECTION:=.section .rodata
+endif
 $(TARGET_OUTPUT_DIR)/resources.c: $(TARGET_OUTPUT_DIR)/resources.txt $(RESOURCE_FILES) tools/LinkResources.pl tools/BinToC.pm | $(TARGET_OUTPUT_DIR)/resources/dirstamp
 	@$(NQ)echo "  GEN     $@"
 	$(Q)$(PERL) tools/LinkResources.pl <$< >$@.$(RANDOM_NUMBER).tmp

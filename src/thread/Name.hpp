@@ -7,7 +7,7 @@
 
 #ifdef __APPLE__
 #define HAVE_PTHREAD_SETNAME_NP
-#else
+#elif !defined(ESP_PLATFORM)
 
 #include <features.h>
 #if defined(__GLIBC__) || defined(__BIONIC__)

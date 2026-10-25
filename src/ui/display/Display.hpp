@@ -111,7 +111,8 @@ public:
 /**
  * A display owned by the host application (e.g. ESPHome on an
  * ESP32), which receives each finished frame from
- * TopCanvas::Flip().
+ * TopCanvas::Flip().  The host sets the handler before XCSoar
+ * starts, because XCSoar creates its #Display itself.
  */
 class Display {
 public:
@@ -124,11 +125,11 @@ public:
                                void *ctx) noexcept;
 
 private:
-  FlipHandler flip_handler = nullptr;
-  void *flip_ctx = nullptr;
+  static inline FlipHandler flip_handler = nullptr;
+  static inline void *flip_ctx = nullptr;
 
 public:
-  void SetFlipHandler(FlipHandler handler, void *ctx) noexcept {
+  static void SetFlipHandler(FlipHandler handler, void *ctx) noexcept {
     flip_handler = handler;
     flip_ctx = ctx;
   }

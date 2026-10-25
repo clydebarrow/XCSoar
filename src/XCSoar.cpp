@@ -117,7 +117,13 @@ Main()
 /**
  * Main entry point for the whole XCSoar application
  */
-#ifndef _WIN32
+#ifdef ESP_PLATFORM
+/* the host application (esp32/xcsoar) calls this on its XCSoar task */
+int XCSoarMain(int argc, char **argv);
+
+int
+XCSoarMain(int argc, char **argv)
+#elif !defined(_WIN32)
 int main(int argc, char **argv)
 #else
 int WINAPI

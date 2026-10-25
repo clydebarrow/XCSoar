@@ -55,7 +55,8 @@ set(XCSOAR_ESP32_SOURCES
   src/ui/window/poll/TopWindow.cpp
   src/util/StringCompare.cxx
   src/util/UTF8.cpp
-  esp32/xcsoar/src/Main.cpp
+  esp32/xcsoar/src/Demo.cpp
+  esp32/xcsoar/src/Host.cpp
 )
 
 set(XCSOAR_ESP32_DEFINES
@@ -75,7 +76,7 @@ set(XCSOAR_ESP32_INCLUDE_DIRS
   esp32/xcsoar/include
 )
 
-# Download the header-only libraries into XCSOAR_ROOT/output/esp32,
+# Download the header-only libraries into XCSOAR_ROOT/output/esp32-libs,
 # shared by all builds, and set fmt_SOURCE_DIR and boost_SOURCE_DIR.
 macro(xcsoar_fetch_libraries)
   include(FetchContent)
@@ -83,7 +84,7 @@ macro(xcsoar_fetch_libraries)
     # allow FetchContent_Populate(), which does not add_subdirectory()
     cmake_policy(SET CMP0169 OLD)
   endif()
-  set(xcsoar_download_dir ${XCSOAR_ROOT}/output/esp32)
+  set(xcsoar_download_dir ${XCSOAR_ROOT}/output/esp32-libs)
 
   FetchContent_Declare(fmt
     GIT_REPOSITORY https://github.com/fmtlib/fmt.git

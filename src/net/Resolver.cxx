@@ -29,6 +29,13 @@ Resolve(const char *node, const char *service,
 	struct addrinfo *ai;
 	int error = getaddrinfo(node, service, hints, &ai);
 	if (error != 0) {
+#ifdef ESP_PLATFORM
+		/* lwIP has no gai_strerror() */
+		throw FmtRuntimeError("Failed to resolve '{}':'{}': error {}",
+				      node == nullptr ? "" : node,
+				      service == nullptr ? "" : service,
+				      error);
+#else
 #ifdef _WIN32
 		const char *msg = gai_strerrorA(error);
 #else
@@ -38,6 +45,7 @@ Resolve(const char *node, const char *service,
 				      node == nullptr ? "" : node,
 				      service == nullptr ? "" : service,
 				      msg);
+#endif
 	}
 
 	return AddressInfoList(ai);

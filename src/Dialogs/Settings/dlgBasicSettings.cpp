@@ -16,8 +16,12 @@
 #include "GlideSolvers/GlidePolar.hpp"
 #include "Dialogs/Message.hpp"
 #include "Dialogs/InternalLink.hpp"
+#include "net/http/Features.hpp"
+
+#ifdef HAVE_HTTP
 #include "Dialogs/Weather/MosmixTemperature.hpp"
 #include "Weather/MOSMIX/AutoUpdate.hpp"
+#endif
 #include "time/BrokenDateTime.hpp"
 #include "Widget/RowFormWidget.hpp"
 #include "util/StaticString.hxx"
@@ -62,8 +66,10 @@ class FlightSetupPanel final
    */
   std::optional<TemperatureValue> offered_temperature;
 
+#ifdef HAVE_HTTP
   /** fetches in the background; cancelled when this panel goes away */
   ForecastTemperatureFetcher forecast_fetcher;
+#endif
 
   void ShowForecastTemperature() noexcept;
 
@@ -393,6 +399,7 @@ FlightSetupPanel::Prepare(ContainerWindow &parent,
      turns up.  Nothing happens at all when one was already fetched
      today, or the pilot has set the value by hand today, or there is
      no fix to pick a station by. */
+#ifdef HAVE_HTTP
   const auto opened_with = settings.forecast_temperature;
   forecast_fetcher.Start([this, opened_with](TemperatureValue value){
     if (fabs(GetValueFloat(Temperature) - opened_with.ToUser()) > 0.01)
@@ -404,6 +411,7 @@ FlightSetupPanel::Prepare(ContainerWindow &parent,
     LoadValue(Temperature, value.ToKelvin(), UnitGroup::TEMPERATURE);
     ShowForecastTemperature();
   });
+#endif
 }
 
 void
@@ -453,12 +461,14 @@ FlightSetupPanel::Save(bool &changed) noexcept
     /* A value the pilot typed outranks the forecast for the rest of
        the day.  Merely closing the dialog on a value a forecast put
        there is not that, so the two are told apart by comparison. */
+#ifdef HAVE_HTTP
     if (!offered_temperature.has_value() ||
         fabs(offered_temperature->ToKelvin() - forecast_temperature) > 0.01) {
       if (const BrokenDate today = BrokenDateTime::NowUTC();
           today.IsPlausible())
         MOSMIX::RememberManualEntry(today);
     }
+#endif
 
     settings.forecast_temperature = value;
     changed = true;

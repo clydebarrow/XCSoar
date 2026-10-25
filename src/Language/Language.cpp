@@ -7,7 +7,7 @@
 
 #include <cassert>
 
-#if defined(HAVE_POSIX) && !defined(ANDROID) && !defined(KOBO) && !defined(__APPLE__)
+#ifdef USE_LIBINTL
 
 #include <locale.h>
 
@@ -74,5 +74,5 @@ reset_gettext_cache()
 {
 }
 
-#endif /* !HAVE_POSIX */
+#endif /* !USE_LIBINTL */
 

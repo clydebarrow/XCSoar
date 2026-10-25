@@ -15,7 +15,9 @@
 #include "AndroidUsbSerialPort.hpp"
 #endif
 
-#if defined(HAVE_POSIX)
+#ifdef ESP_PLATFORM
+/* serial ports are provided by the host application */
+#elif defined(HAVE_POSIX)
 #include "TTYPort.hpp"
 #else
 #include "SerialPort.hpp"
@@ -163,7 +165,7 @@ OpenPortInternal(EventLoop &event_loop, Cares::Channel &cares,
   }
 
   case DeviceConfig::PortType::PTY: {
-#if defined(HAVE_POSIX) && !defined(ANDROID)
+#if defined(HAVE_POSIX) && !defined(ANDROID) && !defined(ESP_PLATFORM)
     if (config.path.empty())
       throw std::runtime_error("No pty path configured");
 
@@ -205,6 +207,9 @@ OpenPortInternal(EventLoop &event_loop, Cares::Channel &cares,
   if (path == nullptr)
     throw std::runtime_error("No port path configured");
 
+#ifdef ESP_PLATFORM
+  throw std::runtime_error("Serial port not available");
+#else
 #ifdef HAVE_POSIX
   auto port = std::make_unique<TTYPort>(event_loop, listener, handler);
 #else
@@ -212,6 +217,7 @@ OpenPortInternal(EventLoop &event_loop, Cares::Channel &cares,
 #endif
   port->Open(path, config.baud_rate);
   return port;
+#endif
 }
 
 std::unique_ptr<Port>

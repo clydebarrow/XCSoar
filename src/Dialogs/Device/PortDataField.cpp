@@ -7,7 +7,7 @@
 #include "Language/Language.hpp"
 #include "util/StringCompare.hxx"
 
-#ifdef HAVE_POSIX
+#if defined(HAVE_POSIX) && !defined(ESP_PLATFORM)
 #include "Device/Port/TTYEnumerator.hpp"
 #endif
 
@@ -72,7 +72,7 @@ AddPort(DataFieldEnum &df, DeviceConfig::PortType type,
   return id;
 }
 
-#if defined(HAVE_POSIX)
+#if defined(HAVE_POSIX) && !defined(ESP_PLATFORM)
 
 static bool
 DetectSerialPorts(DataFieldEnum &df) noexcept
@@ -192,7 +192,7 @@ SetPort(DataFieldEnum &df, DeviceConfig::PortType type,
 static void
 FillSerialPorts(DataFieldEnum &df, const DeviceConfig &config) noexcept
 {
-#if defined(HAVE_POSIX) || defined(_WIN32)
+#if (defined(HAVE_POSIX) && !defined(ESP_PLATFORM)) || defined(_WIN32)
   DetectSerialPorts(df);
 #endif
 

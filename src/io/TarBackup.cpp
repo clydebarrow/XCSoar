@@ -474,7 +474,7 @@ try {
     AllocatedPath source = AllocatedPath::Build(temp_root, name.c_str());
     AllocatedPath dest = ResolveRestoreDestination(source, destination_root,
                                                    name, extracted_names);
-#ifdef HAVE_POSIX
+#if defined(HAVE_POSIX) && !defined(ESP_PLATFORM)
     if (IsUserToolPath(name)) {
       const auto tools_directory =
         AllocatedPath::Build(destination_root, "tools");

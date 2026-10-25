@@ -3,7 +3,8 @@
 
 #pragma once
 
-#if defined(HAVE_POSIX) && !defined(ANDROID) && !defined(KOBO) && !defined(__APPLE__)
+#if defined(HAVE_POSIX) && !defined(ANDROID) && !defined(KOBO) && \
+  !defined(__APPLE__) && !defined(ESP_PLATFORM)
 
 /**
  * Using the C library's gettext implementation instead of rolling our

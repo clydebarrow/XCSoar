@@ -6,15 +6,15 @@
 
 #ifndef NDEBUG
 
-#ifdef ANDROID
-/* on Android, XCSoar's "main" thread is different from the process
-   main thread */
+#if defined(ANDROID) || defined(ESP_PLATFORM)
+/* on Android and on the ESP32, XCSoar's "main" thread is different
+   from the process main thread */
 static ThreadHandle main_thread;
 #else
 static ThreadHandle main_thread = ThreadHandle::GetCurrent();
 #endif
 
-#ifdef ANDROID
+#if defined(ANDROID) || defined(ESP_PLATFORM)
 
 void
 InitThreadDebug()

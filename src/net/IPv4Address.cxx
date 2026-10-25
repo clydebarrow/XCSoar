@@ -13,7 +13,7 @@
 #include <arpa/inet.h>
 #endif
 
-#if !defined(_WIN32) && !defined(__BIONIC__)
+#if !defined(_WIN32) && !defined(__BIONIC__) && !defined(ESP_PLATFORM)
 #include <ifaddrs.h>
 #endif
 
@@ -24,7 +24,7 @@ IPv4Address::IPv4Address(SocketAddress src) noexcept
 	assert(src.GetFamily() == AF_INET);
 }
 
-#if !defined(_WIN32) && !defined(__BIONIC__)
+#if !defined(_WIN32) && !defined(__BIONIC__) && !defined(ESP_PLATFORM)
 
 /**
  * helper to iterate over available devices, locate the

@@ -2,6 +2,7 @@
 // Copyright The XCSoar Project
 
 #include "PlatformStorageHotplugMonitor.hpp"
+#include "StorageHotplugMonitor.hpp"
 
 #if defined(ANDROID)
 #include "android/AndroidStorageHotplugMonitor.hpp"

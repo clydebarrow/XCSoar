@@ -3,6 +3,16 @@
 
 #include "Table.hpp"
 
+#ifdef ESP_PLATFORM
+
+/* the translations would not fit in the firmware; they are loaded
+   from .mo files in the data directory instead (LoadLanguageFile()) */
+const BuiltinLanguage language_table[] = {
+  {},
+};
+
+#else
+
 #ifdef HAVE_BUILTIN_LANGUAGES
 
 #include <cstdint>
@@ -135,3 +145,5 @@ const BuiltinLanguage language_table[] = {
 
   {},
 };
+
+#endif // !ESP_PLATFORM

@@ -11,7 +11,9 @@
 #include "UniqueFileDescriptor.hxx"
 #include "Open.hxx"
 
+#ifndef ESP_PLATFORM
 #include <sys/mman.h>
+#endif
 #include <sys/stat.h>
 #else
 #include "system/UTF8Win32.hpp"
@@ -41,11 +43,22 @@ FileMapping::FileMapping(Path path)
 
   const std::size_t size = (std::size_t)st.st_size;
 
+#ifdef ESP_PLATFORM
+  /* ESP-IDF has no mmap(): read the whole file into memory */
+  auto *data = new std::byte[size];
+  try {
+    fd.FullRead({data, size});
+  } catch (...) {
+    delete[] data;
+    throw;
+  }
+#else
   void *data = mmap(nullptr, size, PROT_READ, MAP_SHARED, fd.Get(), 0);
   if (data == (void *)-1)
     throw FmtErrno("Failed to map {}", path);
 
   madvise(data, size, MADV_WILLNEED);
+#endif
 #else /* !HAVE_POSIX */
   hFile = ::CreateFileW(UTF8ToWide(path.c_str()).c_str(), GENERIC_READ,
                         FILE_SHARE_READ, nullptr, OPEN_EXISTING,
@@ -91,7 +104,9 @@ FileMapping::FileMapping(Path path)
 
 FileMapping::~FileMapping() noexcept
 {
-#ifdef HAVE_POSIX
+#ifdef ESP_PLATFORM
+  delete[] span.data();
+#elif defined(HAVE_POSIX)
   munmap(span.data(), span.size());
 #else /* !HAVE_POSIX */
   ::UnmapViewOfFile(span.data());

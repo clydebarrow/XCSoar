@@ -59,25 +59,44 @@ struct Config {
   void *ctx;
 
   /**
-   * How often the test scene moves on.
+   * The directory XCSoar keeps its data in (profiles, maps, logs),
+   * e.g. "/sdcard/XCSoar".
+   */
+  const char *data_path;
+
+  /**
+   * RunDemo() only: how often the test scene moves on.
    */
   unsigned frame_interval_ms;
 
   /**
-   * Stop after this many animation steps; 0 means run forever.
+   * RunDemo() only: stop after this many animation steps; 0 means
+   * run forever.
    */
   unsigned max_frames;
 };
 
 /**
- * Run XCSoar's event loop on the calling thread.  Returns when
+ * Run XCSoar on the calling thread, as its main() would.  Returns
+ * when XCSoar quits.  The calling thread must be a pthread: XCSoar
+ * identifies its threads with pthread_self(), which aborts in other
+ * FreeRTOS tasks.
+ *
+ * @return false on error
+ */
+bool
+Run(const Config &config) noexcept;
+
+/**
+ * Run a test scene instead of XCSoar: XCSoar's canvas, fonts, event
+ * loop and windows, with touch input.  Returns when
  * #Config::max_frames animation steps have been drawn or on a fatal
  * error (which is logged).
  *
  * @return false on error
  */
 bool
-Run(const Config &config) noexcept;
+RunDemo(const Config &config) noexcept;
 
 enum class PointerAction : uint8_t {
   DOWN,

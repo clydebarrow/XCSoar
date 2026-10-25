@@ -147,7 +147,7 @@ SocketDescriptor::CreateNonBlock(int domain, int type, int protocol) noexcept
 	return true;
 }
 
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(ESP_PLATFORM)
 
 bool
 SocketDescriptor::CreateSocketPair(int domain, int type, int protocol,

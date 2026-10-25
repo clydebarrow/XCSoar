@@ -7,7 +7,8 @@ TARGETS = PC WIN64 \
 	ANDROID ANDROID7 ANDROID86 \
 	ANDROIDAARCH64 ANDROIDX64 \
 	ANDROIDFAT \
-	MACOS IOS64 IOS64SIM
+	MACOS IOS64 IOS64SIM \
+	ESP32
 
 ifeq ($(TARGET),)
   ifeq ($(HOST_IS_UNIX),y)
@@ -52,6 +53,7 @@ TARGET_IS_PI32 := n
 TARGET_IS_PI64 := n
 TARGET_IS_KOBO := n
 TARGET_IS_CUBIE := n
+TARGET_IS_ESP32 := n
 HAVE_POSIX := n
 HAVE_WIN32 := y
 HAVE_MSVCRT := y
@@ -243,6 +245,16 @@ ifeq ($(TARGET),NEON)
   TARGET_IS_ARMHF = y
   ARMV7 := y
   NEON := y
+endif
+
+ifeq ($(TARGET),ESP32)
+  # An ESP-IDF component inside a host application (e.g. ESPHome), see
+  # esp32/.  Make is not used to compile it; esp32/generate-sources.sh
+  # takes the source lists from here.
+  override TARGET = UNIX
+  TARGET_IS_ESP32 = y
+  VFB = y
+  HAVE_HTTP := n
 endif
 
 ifeq ($(TARGET),MACOS)

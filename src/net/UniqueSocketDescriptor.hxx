@@ -71,7 +71,7 @@ public:
 		return UniqueSocketDescriptor(SocketDescriptor::AcceptNonBlock(address));
 	}
 
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(ESP_PLATFORM)
 	static bool CreateSocketPair(int domain, int type, int protocol,
 				     UniqueSocketDescriptor &a,
 				     UniqueSocketDescriptor &b) noexcept {
