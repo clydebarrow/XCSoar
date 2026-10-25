@@ -59,6 +59,10 @@ if(NOT CMAKE_BUILD_EARLY_EXPANSION)
   target_compile_options(${COMPONENT_LIB} PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-std=gnu++20 -fexceptions>)
 
+  # Optimise for speed, not size: map drawing and the glide computer
+  # are CPU bound, and the application has flash to spare
+  target_compile_options(${COMPONENT_LIB} PRIVATE -O2)
+
   # The toolchain's limits.h defines LLONG_MAX for C only, but Lua's
   # headers need it in C++ too; libstdc++'s <climits> adds it
   target_compile_options(${COMPONENT_LIB} PRIVATE
