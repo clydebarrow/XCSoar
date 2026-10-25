@@ -44,14 +44,23 @@ constexpr const char *ROM_MOUNT_POINT = "/rom";
 bool
 MountRomFs(std::span<const RomFile> files) noexcept;
 
+/**
+ * The size of one pixel of the frames passed to Config::frame_ready:
+ * 2 for RGB565 in native (little endian) byte order, or 4 for the
+ * bytes blue, green, red, alpha (ARGB8888 read as a little endian
+ * word).
+ */
+[[gnu::const]]
+unsigned
+BytesPerPixel() noexcept;
+
 struct Config {
   unsigned width, height;
 
   /**
    * Called on the XCSoar task each time a frame is finished.  The
-   * frame is width * height pixels, 32 bits each, stored as the bytes
-   * blue, green, red, alpha (ARGB8888 read as a little endian
-   * word), with each row starting #pitch bytes after the previous
+   * frame is width * height pixels in the format BytesPerPixel()
+   * describes, with each row starting #pitch bytes after the previous
    * one.  The pixels are only valid until this function returns.
    */
   void (*frame_ready)(const void *pixels, unsigned pitch,

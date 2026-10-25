@@ -201,8 +201,9 @@ SCREEN_SOURCES += \
 	$(WINDOW_SRC_DIR)/fb/SingleWindow.cpp
 FB_CPPFLAGS = -DUSE_VFB
 ifeq ($(TARGET_IS_ESP32),y)
-# each frame goes to the host application's display
-FB_CPPFLAGS += -DUSE_EXTERNAL_FB
+# each frame goes to the host application's display; 16 bit pixels
+# halve the memory for the screen, the map buffers and the bitmaps
+FB_CPPFLAGS += -DUSE_EXTERNAL_FB -DUSE_RGB565
 endif
 else ifeq ($(USE_FB),y)
 SCREEN_SOURCES += $(SCREEN_CUSTOM_SOURCES_IMG)

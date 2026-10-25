@@ -7,6 +7,8 @@
 
 #ifdef GREYSCALE
 using ActivePixelTraits = GreyscalePixelTraits;
+#elif defined(USE_RGB565)
+using ActivePixelTraits = RGB565PixelTraits;
 #else
 using ActivePixelTraits = BGRAPixelTraits;
 #endif

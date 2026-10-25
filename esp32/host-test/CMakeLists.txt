@@ -47,4 +47,10 @@ target_include_directories(RunEsp32Host PRIVATE
   ${XCSOAR_ESP32_INCLUDE_DIRS} ${GENERATED_DIR}
   ${fmt_SOURCE_DIR}/include ${boost_SOURCE_DIR})
 target_compile_definitions(RunEsp32Host PRIVATE ${XCSOAR_ESP32_DEFINES})
+
+# the pixel format of the ESP32 build
+option(XCSOAR_RGB565 "Draw with 16 bit pixels" ON)
+if(XCSOAR_RGB565)
+  target_compile_definitions(RunEsp32Host PRIVATE USE_RGB565)
+endif()
 target_link_libraries(RunEsp32Host PRIVATE Freetype::Freetype)

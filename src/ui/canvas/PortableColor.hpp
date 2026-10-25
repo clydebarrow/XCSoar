@@ -230,8 +230,40 @@ public:
            ((_g & 0xfc) << 3) |
            (_b >> 3)) {}
 
+  static constexpr RGB565Color FromNativeValue(uint16_t value) noexcept {
+    RGB565Color c{};
+    c.value = value;
+    return c;
+  }
+
   constexpr uint16_t GetNativeValue() const {
     return value;
+  }
+
+  /* the channels widened to 8 bits, repeating the top bits so that
+     full intensity stays 0xff */
+
+  constexpr uint8_t Red() const noexcept {
+    const unsigned r = value >> 11;
+    return (r << 3) | (r >> 2);
+  }
+
+  constexpr uint8_t Green() const noexcept {
+    const unsigned g = (value >> 5) & 0x3f;
+    return (g << 2) | (g >> 4);
+  }
+
+  constexpr uint8_t Blue() const noexcept {
+    const unsigned b = value & 0x1f;
+    return (b << 3) | (b >> 2);
+  }
+
+  constexpr bool operator ==(const RGB565Color other) const noexcept {
+    return value == other.value;
+  }
+
+  constexpr bool operator !=(const RGB565Color other) const noexcept {
+    return !(*this == other);
   }
 };
 

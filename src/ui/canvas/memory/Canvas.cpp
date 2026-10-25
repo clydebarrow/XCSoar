@@ -29,6 +29,8 @@ public:
   static constexpr ActivePixelTraits::color_type Import(Color color) {
 #ifdef GREYSCALE
     return Luminosity8(color.GetLuminosity());
+#elif defined(USE_RGB565)
+    return RGB565Color(color.Red(), color.Green(), color.Blue());
 #else
     return BGRA8Color(color.Red(), color.Green(), color.Blue(), color.Alpha());
 #endif
@@ -682,9 +684,10 @@ Canvas::StretchWithSourceAlpha(PixelPoint dest_position, PixelSize dest_size,
 {
   SDLRasterCanvas canvas(buffer);
 
-#ifdef GREYSCALE
-  /* greyscale pixels have no alpha channel, so per-pixel source-alpha
-     blending is not available. RASP selects an opaque colormap on 
+#if defined(GREYSCALE) || defined(USE_RGB565)
+  /* greyscale and RGB565 pixels have no alpha channel, so per-pixel
+     source-alpha blending is not available. RASP selects an opaque
+     colormap on 
      this target, so this path is not normally reached at runtime. */
   canvas.ScaleRectangle(dest_position, dest_size,
                         src.At(src_position.x, src_position.y),
@@ -707,8 +710,8 @@ Canvas::StretchWithSourceAlpha(PixelPoint dest_position, PixelSize dest_size,
 {
   SDLRasterCanvas canvas(buffer);
 
-#ifdef GREYSCALE
-  /* greyscale pixels have no alpha channel, so only the global constant
+#if defined(GREYSCALE) || defined(USE_RGB565)
+  /* greyscale and RGB565 pixels have no alpha channel, so only the global constant
      alpha applies here. */
   AlphaPixelOperations<ActivePixelTraits> operations(alpha);
 #else

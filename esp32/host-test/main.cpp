@@ -8,8 +8,10 @@
 
 #include "XCSoarEsp32.hpp"
 
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <vector>
 
 static constexpr unsigned WIDTH = 800, HEIGHT = 480;
@@ -44,11 +46,22 @@ FrameReady(const void *pixels, unsigned pitch, void *) noexcept
   InjectTouches();
 
   last_frame.clear();
+  const bool rgb565 = XCSoarEsp32::BytesPerPixel() == 2;
   for (unsigned y = 0; y < HEIGHT; ++y) {
     const auto *row = static_cast<const unsigned char *>(pixels) + y * pitch;
     for (unsigned x = 0; x < WIDTH; ++x) {
-      const unsigned char *bgra = row + x * 4;
-      last_frame.insert(last_frame.end(), {bgra[2], bgra[1], bgra[0]});
+      if (rgb565) {
+        uint16_t v;
+        memcpy(&v, row + x * 2, sizeof(v));
+        const unsigned r = v >> 11, g = (v >> 5) & 0x3f, b = v & 0x1f;
+        last_frame.insert(last_frame.end(),
+                          {(unsigned char)((r << 3) | (r >> 2)),
+                           (unsigned char)((g << 2) | (g >> 4)),
+                           (unsigned char)((b << 3) | (b >> 2))});
+      } else {
+        const unsigned char *bgra = row + x * 4;
+        last_frame.insert(last_frame.end(), {bgra[2], bgra[1], bgra[0]});
+      }
     }
   }
 }

@@ -28,6 +28,8 @@ class GLTexture;
 #elif defined(USE_MEMORY_CANVAS)
 #ifdef GREYSCALE
 using BitmapPixelTraits = GreyscalePixelTraits;
+#elif defined(USE_RGB565)
+using BitmapPixelTraits = RGB565PixelTraits;
 #else
 using BitmapPixelTraits = BGRAPixelTraits;
 #endif

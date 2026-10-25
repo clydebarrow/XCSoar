@@ -9,6 +9,16 @@
 
 namespace XCSoarEsp32 {
 
+unsigned
+BytesPerPixel() noexcept
+{
+#ifdef USE_RGB565
+  return 2;
+#else
+  return 4;
+#endif
+}
+
 static void
 FlipToHost(const void *pixels, unsigned pitch, void *ctx) noexcept
 {

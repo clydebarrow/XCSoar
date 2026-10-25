@@ -418,3 +418,145 @@ struct BGRAPixelTraits {
 };
 
 #endif
+
+#ifdef USE_RGB565
+
+/**
+ * Description for the 16 bit pixel format with 5 bits red, 6 bits
+ * green and 5 bits blue, in native byte order.  Channels are handled
+ * as 8 bit values.
+ *
+ * See #GreyscalePixelTraits for documentation about PixelTraits.
+ */
+struct RGB565PixelTraits {
+  using color_type = RGB565Color;
+  using channel_type = uint8_t;
+  using integer_type = uint16_t;
+  using pointer = color_type *;
+  using rpointer = color_type *gcc_restrict;
+  using const_pointer = const color_type *;
+  using const_rpointer = const color_type *gcc_restrict;
+
+  static_assert(sizeof(color_type) == sizeof(integer_type),
+                "Wrong integer_type");
+
+  static constexpr integer_type ToInteger(color_type c) noexcept {
+    return c.GetNativeValue();
+  }
+
+  static constexpr color_type FromInteger(integer_type i) noexcept {
+    return color_type::FromNativeValue(i);
+  }
+
+  static constexpr color_type TransformInteger(color_type c,
+                                               std::invocable<integer_type> auto f) noexcept {
+    return FromInteger(f(ToInteger(c)));
+  }
+
+  static constexpr color_type TransformInteger(color_type a, color_type b,
+                                               std::invocable<integer_type, integer_type> auto f) noexcept {
+    return FromInteger(f(ToInteger(a), ToInteger(b)));
+  }
+
+  static constexpr color_type TransformChannels(color_type c,
+                                                std::invocable<channel_type> auto f) noexcept {
+    return color_type(f(c.Red()), f(c.Green()), f(c.Blue()));
+  }
+
+  static constexpr color_type TransformChannels(color_type a, color_type b,
+                                                std::invocable<channel_type, channel_type> auto f) noexcept {
+    return color_type(f(a.Red(), b.Red()),
+                      f(a.Green(), b.Green()),
+                      f(a.Blue(), b.Blue()));
+  }
+
+  static constexpr bool IsBlack(color_type c) noexcept {
+    return ToInteger(c) == 0;
+  }
+
+  static constexpr bool IsWhite(color_type c) noexcept {
+    return ToInteger(c) == 0xffff;
+  }
+
+  static constexpr std::ptrdiff_t CalcIncrement(std::ptrdiff_t delta) noexcept {
+    return delta;
+  }
+
+  static constexpr pointer Next(pointer p, std::ptrdiff_t delta) noexcept {
+    return p + CalcIncrement(delta);
+  }
+
+  static constexpr const_pointer Next(const_pointer p,
+                                      std::ptrdiff_t delta) noexcept {
+    return p + CalcIncrement(delta);
+  }
+
+  static constexpr pointer NextByte(pointer p, std::ptrdiff_t delta) noexcept {
+    return (pointer)OffsetPointer(p, delta);
+  }
+
+  static constexpr const_pointer NextByte(const_pointer p,
+                                          std::ptrdiff_t delta) noexcept {
+    return (const_pointer)OffsetPointer(p, delta);
+  }
+
+  static constexpr pointer NextRow(pointer p, std::size_t pitch,
+                                   std::ptrdiff_t delta) noexcept {
+    return NextByte(p, int(pitch) * delta);
+  }
+
+  static constexpr const_pointer NextRow(const_pointer p, std::size_t pitch,
+                                         std::ptrdiff_t delta) noexcept {
+    return NextByte(p, int(pitch) * delta);
+  }
+
+  static constexpr pointer At(pointer p, std::size_t pitch,
+                              int x, int y) noexcept {
+    return Next(NextRow(p, pitch, y), x);
+  }
+
+  static constexpr const_pointer At(const_pointer p, std::size_t pitch,
+                                    int x, int y) noexcept {
+    return Next(NextRow(p, pitch, y), x);
+  }
+
+  static color_type ReadPixel(const_pointer p) noexcept {
+    return *p;
+  }
+
+  static void WritePixel(pointer p, color_type c) noexcept {
+    *p = c;
+  }
+
+  static void FillPixels(pointer p, unsigned n, color_type c) noexcept {
+    std::fill_n(p, n, c);
+  }
+
+  static void CopyPixels(rpointer p,
+                         const_rpointer src, unsigned n) noexcept {
+    std::copy_n(src, n, p);
+  }
+
+  [[gnu::hot]]
+  static constexpr void ForHorizontal(pointer p, unsigned n,
+                                      std::invocable<pointer> auto f) noexcept {
+    for (unsigned i = 0; i < n; ++i)
+      f(Next(p, i));
+  }
+
+  [[gnu::hot]]
+  static constexpr void ForHorizontal(rpointer p, const_rpointer q, unsigned n,
+                                      std::invocable<pointer> auto f) noexcept {
+    for (unsigned i = 0; i < n; ++i)
+      f(Next(p, i), Next(q, i));
+  }
+
+  [[gnu::hot]]
+  static constexpr void ForVertical(pointer p, std::size_t pitch, unsigned n,
+                                    std::invocable<pointer> auto f) noexcept {
+    for (; n > 0; --n, p = NextByte(p, pitch))
+      f(p);
+  }
+};
+
+#endif
