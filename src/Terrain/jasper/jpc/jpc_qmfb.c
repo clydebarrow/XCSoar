@@ -90,8 +90,15 @@
 *
 \******************************************************************************/
 
+#ifdef ESP_PLATFORM
+/* the column group buffers are on the stack (16 columns each); longer
+   columns use the heap */
+#define QMFB_SPLITBUFSIZE	256
+#define	QMFB_JOINBUFSIZE	256
+#else
 #define QMFB_SPLITBUFSIZE	4096
 #define	QMFB_JOINBUFSIZE	4096
+#endif
 
 #ifdef JAS_ENABLE_ENCODER
 static int jpc_ft_analyze(jpc_fix_t *a, int xstart, int ystart, int width, int height,

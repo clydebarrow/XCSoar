@@ -65,6 +65,12 @@ struct Config {
   const char *data_path;
 
   /**
+   * The pixel density of the panel, which XCSoar sizes its fonts and
+   * symbols by; 0 lets XCSoar assume 96.
+   */
+  unsigned dpi;
+
+  /**
    * RunDemo() only: how often the test scene moves on.
    */
   unsigned frame_interval_ms;

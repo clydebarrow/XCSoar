@@ -285,7 +285,7 @@ $(RESOURCE_FLAGS_STAMP): FORCE | $(TARGET_OUTPUT_DIR)/dirstamp
 
 $(TARGET_OUTPUT_DIR)/resources.txt: Data/resources.txt $(RESOURCE_FLAGS_STAMP) | $(TARGET_OUTPUT_DIR)/dirstamp $(BUILD_TOOLCHAIN_TARGET)
 	@$(NQ)echo "  CPP     $@"
-	$(Q)cat $< |$(CC) -E -o $@.$(RANDOM_NUMBER).tmp -I$(OUT)/include $(TARGET_CPPFLAGS) $(OPENGL_CPPFLAGS) -
+	$(Q)cat $< |$(CC) -E -o $@.$(RANDOM_NUMBER).tmp -I$(OUT)/include $(TARGET_CPPFLAGS) $(OPENGL_CPPFLAGS) $(RESOURCE_CPPFLAGS) -
 	$(Q)mv $@.$(RANDOM_NUMBER).tmp $@
 
 RANDOM_NUMBER := $(shell od -vAn -N4 -tu4 < /dev/urandom| tr -d ' ')
@@ -347,7 +347,12 @@ RESOURCE_FILES += $(PNG_TITLE_WHITE_640_RGBA)
 RESOURCE_FILES += $(BMP_LAUNCH_ALL)
 RESOURCE_FILES += $(PNG_LAUNCH_FLY_640_RGBA) $(PNG_LAUNCH_SIM_640_RGBA)
 
+ifeq ($(TARGET_IS_ESP32),y)
+# no sound output yet
+RESOURCE_CPPFLAGS += -DNO_SOUND_RESOURCES
+else
 RESOURCE_FILES += $(RAW_SOUNDS)
+endif
 
 $(patsubst $(DATA)/icons/%.bmp,$(DATA)/icons2/%.png,$(filter $(DATA)/icons/%.bmp,$(RESOURCE_FILES))): $(DATA)/icons2/%.png: $(DATA)/icons/%.bmp | $(DATA)/icons2/dirstamp
 	$(Q)$(IM_CONVERT) $< $@

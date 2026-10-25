@@ -67,6 +67,7 @@ main(int argc, char **argv)
     .frame_ready = FrameReady,
     .ctx = nullptr,
     .data_path = nullptr,
+    .dpi = 0,
     .frame_interval_ms = 10,
     .max_frames = 30,
   };

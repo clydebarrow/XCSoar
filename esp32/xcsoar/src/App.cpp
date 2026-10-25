@@ -51,15 +51,17 @@ Run(const Config &config) noexcept
      line */
   std::string size = fmt::format("-{}x{}", config.width, config.height);
   std::string datapath = fmt::format("-datapath={}", config.data_path);
+  std::string dpi = fmt::format("-dpi={}", config.dpi);
   char program[] = "xcsoar";
   char *argv[] = {
     program,
     size.data(),
     datapath.data(),
+    config.dpi > 0 ? dpi.data() : nullptr,
     nullptr,
   };
 
-  return XCSoarMain(3, argv) == 0;
+  return XCSoarMain(config.dpi > 0 ? 4 : 3, argv) == 0;
 }
 
 } // namespace XCSoarEsp32

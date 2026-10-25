@@ -11,6 +11,7 @@
 #endif
 
 #include <cassert>
+#include <cstddef>
 
 void
 Thread::SetIdlePriority() noexcept
@@ -41,7 +42,14 @@ Thread::Start()
   if (error != 0)
     throw MakeErrno(error, "pthread_attr_init() failed");
 
-  error = pthread_attr_setstacksize(&attr, 640 * 1024);
+#ifdef ESP_PLATFORM
+  /* every stack is allocated in full, and PSRAM is needed for
+     drawing */
+  constexpr std::size_t stack_size = 128 * 1024;
+#else
+  constexpr std::size_t stack_size = 640 * 1024;
+#endif
+  error = pthread_attr_setstacksize(&attr, stack_size);
   if (error != 0)
     throw MakeErrno(error, "pthread_attr_setstacksize() failed");
 

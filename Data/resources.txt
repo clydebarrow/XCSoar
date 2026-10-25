@@ -152,6 +152,7 @@ bitmap_icon_scaled IDB_WEATHER_STATION "map_weather_station"
 
 // Audio
 
+#ifndef NO_SOUND_RESOURCES
 sound IDR_FAIL "fail"
 sound IDR_INSERT "insert"
 sound IDR_REMOVE "remove"
@@ -182,3 +183,4 @@ sound IDR_WAV_LEVEL "level"
 sound IDR_WAV_AIRSPACE_NEAR "airspace_near"
 sound IDR_WAV_AIRSPACE_ABOVE "airspace_above"
 sound IDR_WAV_AIRSPACE_INSIDE "airspace_inside"
+#endif

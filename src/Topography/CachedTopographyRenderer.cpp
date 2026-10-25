@@ -4,7 +4,7 @@
 #include "CachedTopographyRenderer.hpp"
 #include "TopographyStore.hpp"
 
-#ifndef ENABLE_OPENGL
+#ifdef USE_TOPOGRAPHY_CACHE
 
 void
 CachedTopographyRenderer::Draw(Canvas &canvas,

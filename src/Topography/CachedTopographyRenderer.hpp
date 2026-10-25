@@ -6,13 +6,19 @@
 #include "TopographyRenderer.hpp"
 #include "Renderer/TransparentRendererCache.hpp"
 
+#if !defined(ENABLE_OPENGL) && !defined(ESP_PLATFORM)
+/* draw into a cache, which is reused while the map does not move; on
+   ESP32 the screen-sized buffer costs too much memory */
+#define USE_TOPOGRAPHY_CACHE
+#endif
+
 /**
  * Class used to manage and render vector topography layers
  */
 class CachedTopographyRenderer {
   TopographyRenderer renderer;
 
-#ifndef ENABLE_OPENGL
+#ifdef USE_TOPOGRAPHY_CACHE
   TransparentRendererCache cache;
 
   unsigned last_serial = 0;
@@ -25,12 +31,12 @@ public:
   {}
 
   void Flush() noexcept {
-#ifndef ENABLE_OPENGL
+#ifdef USE_TOPOGRAPHY_CACHE
     cache.Invalidate();
 #endif
   }
 
-#ifdef ENABLE_OPENGL
+#ifndef USE_TOPOGRAPHY_CACHE
   void Draw(Canvas &canvas, const WindowProjection &projection) noexcept {
     renderer.Draw(canvas, projection);
   }
