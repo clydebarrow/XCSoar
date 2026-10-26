@@ -47,6 +47,10 @@ SmallTrafficWindow::SmallTrafficWindow(ContainerWindow &parent,
                                        const WindowStyle style) noexcept
   :FlarmTrafficWindow(look, 1, 1, true)
 {
+#ifndef ENABLE_OPENGL
+  /* OnPaint() draws only the circle; the map shows around it */
+  SetTransparent();
+#endif
   Create(parent, rc, style);
 }
 

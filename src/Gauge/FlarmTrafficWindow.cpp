@@ -800,16 +800,18 @@ FlarmTrafficWindow::Paint(Canvas &canvas) noexcept
 void
 FlarmTrafficWindow::OnPaint(Canvas &canvas) noexcept
 {
-#ifdef ENABLE_OPENGL
   if (small) {
+#ifdef ENABLE_OPENGL
     const ScopeAlphaBlend alpha_blend;
+    const Color background = look.background_color.WithAlpha(0xd0);
+#else
+    const Color background = look.background_color;
+#endif
 
     canvas.SelectBlackPen();
-    canvas.Select(Brush(look.background_color.WithAlpha(0xd0)));
+    canvas.Select(Brush(background));
     radar_renderer.DrawCircle(canvas, radar_renderer.GetRadius());
-
   } else
-#endif
     canvas.Clear(look.background_color);
 
   Paint(canvas);
