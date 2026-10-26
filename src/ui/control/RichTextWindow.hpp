@@ -397,6 +397,15 @@ public:
   void SetText(const char *text, bool parse_markdown = true);
 
   /**
+   * Free the off-screen copy of the content while the window is not
+   * shown.  It is drawn again at the next paint.
+   */
+  void ReleaseContentCache() noexcept {
+    content_cache.Destroy();
+    InvalidateContentCache();
+  }
+
+  /**
    * Content height for scroll sizing.  May be a cheap estimate before
    * the first wrap; exact after layout / #CalculateExactContentHeight.
    */

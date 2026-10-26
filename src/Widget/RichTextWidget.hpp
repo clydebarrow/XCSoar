@@ -73,6 +73,7 @@ public:
   PixelSize GetMinimumSize() const noexcept override;
   PixelSize GetMaximumSize() const noexcept override;
   bool KeyPress(unsigned key_code) noexcept override;
+  void Hide() noexcept override;
 
 protected:
   /**

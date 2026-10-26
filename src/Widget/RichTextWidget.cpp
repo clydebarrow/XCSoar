@@ -43,6 +43,15 @@ RichTextWidget::GetMaximumSize() const noexcept
 }
 
 void
+RichTextWidget::Hide() noexcept
+{
+  WindowWidget::Hide();
+
+  /* a pager keeps every page; each cache is several screens big */
+  static_cast<RichTextWindow &>(GetWindow()).ReleaseContentCache();
+}
+
+void
 RichTextWidget::SetText(const char *_text) noexcept
 {
   text = _text != nullptr ? _text : "";
