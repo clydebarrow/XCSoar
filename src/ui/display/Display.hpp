@@ -3,6 +3,12 @@
 
 #pragma once
 
+#ifdef USE_EXTERNAL_FB
+#include "ui/dim/Rect.hpp"
+
+#include <span>
+#endif
+
 #ifdef USE_X11
 #include "x11/Display.hpp"
 #endif
@@ -117,11 +123,14 @@ public:
 class Display {
 public:
   /**
-   * @param pixels the frame, 32 bits per pixel in the memory canvas
-   * format; only valid during the call
+   * @param pixels the frame in the memory canvas format; only valid
+   * during the call
    * @param pitch the distance between two rows in bytes
+   * @param dirty the areas that changed since the last frame; the
+   * rest of the frame is the same as before
    */
   using FlipHandler = void (*)(const void *pixels, unsigned pitch,
+                               std::span<const PixelRect> dirty,
                                void *ctx) noexcept;
 
 private:
@@ -134,9 +143,10 @@ public:
     flip_ctx = ctx;
   }
 
-  void Flip(const void *pixels, unsigned pitch) const noexcept {
+  void Flip(const void *pixels, unsigned pitch,
+            std::span<const PixelRect> dirty) const noexcept {
     if (flip_handler != nullptr)
-      flip_handler(pixels, pitch, flip_ctx);
+      flip_handler(pixels, pitch, dirty, flip_ctx);
   }
 };
 

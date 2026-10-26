@@ -165,6 +165,15 @@ Window::Invalidate() noexcept
 }
 
 void
+Window::InvalidateParent() noexcept
+{
+  if (parent != nullptr)
+    parent->Invalidate();
+  else
+    Invalidate();
+}
+
+void
 Window::Show() noexcept
 {
   AssertThread();

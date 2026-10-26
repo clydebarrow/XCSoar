@@ -54,6 +54,13 @@ MountRomFs(std::span<const RomFile> files) noexcept;
 unsigned
 BytesPerPixel() noexcept;
 
+/**
+ * A rectangle in the frame, in pixels.
+ */
+struct Rect {
+  unsigned x, y, width, height;
+};
+
 struct Config {
   unsigned width, height;
 
@@ -62,8 +69,11 @@ struct Config {
    * frame is width * height pixels in the format BytesPerPixel()
    * describes, with each row starting #pitch bytes after the previous
    * one.  The pixels are only valid until this function returns.
+   * Only the #dirty_count areas in #dirty have changed since the
+   * previous frame.
    */
   void (*frame_ready)(const void *pixels, unsigned pitch,
+                      const Rect *dirty, unsigned dirty_count,
                       void *ctx) noexcept;
   void *ctx;
 

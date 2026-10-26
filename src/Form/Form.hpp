@@ -83,6 +83,11 @@ protected:
 
   void OnPaint(Canvas &canvas) noexcept override;
 
+  /* the border is drawn after the controls */
+  bool PaintsOverChildren() const noexcept override {
+    return true;
+  }
+
   std::string caption;
 
 public:

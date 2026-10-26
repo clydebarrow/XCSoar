@@ -65,6 +65,36 @@ public:
    */
   void InvalidateChild(const Window &child) noexcept;
 
+protected:
+  /**
+   * The window #descendant (#child itself, or a window inside it)
+   * needs to be repainted.  The default implementation passes it on
+   * to the parent; #TopWindow collects them.  A null #descendant
+   * means everything: a window was removed, and no pointer to it may
+   * be kept.
+   */
+  virtual void InvalidateDescendant(const Window &child,
+                                    const Window *descendant) noexcept;
+
+  /**
+   * Does OnPaint() draw over the child windows?  Then a child cannot
+   * be repainted on its own: the whole window is.
+   */
+  virtual bool PaintsOverChildren() const noexcept {
+    return false;
+  }
+
+  /**
+   * Pass #descendant on, unless #child is covered by a sibling.
+   */
+  void InvalidateChildDescendant(const Window &child,
+                                 const Window *descendant) noexcept {
+    if (!children.IsCovered(child))
+      InvalidateDescendant(child, descendant);
+  }
+
+public:
+
   void BringChildToTop(Window &child) noexcept {
     children.BringToTop(child);
     InvalidateChild(child);

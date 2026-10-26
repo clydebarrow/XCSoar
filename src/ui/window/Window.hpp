@@ -152,8 +152,12 @@ public:
   void Move(PixelPoint _position) noexcept {
     AssertThread();
 
-    position = _position;
-    Invalidate();
+    if (_position != position) {
+      position = _position;
+      /* the area it moved away from needs a repaint too */
+      InvalidateParent();
+    } else
+      Invalidate();
   }
 
   void Move(PixelPoint _position, PixelSize _size) noexcept {
@@ -221,7 +225,8 @@ public:
 
     size = _size;
 
-    Invalidate();
+    /* a smaller window uncovers part of the parent */
+    InvalidateParent();
     OnResize(size);
   }
 
@@ -427,6 +432,11 @@ public:
   PixelRect GetParentClientRect() const noexcept;
 
   virtual void Invalidate() noexcept;
+
+  /**
+   * Invalidate the parent window, or this one if it has none.
+   */
+  void InvalidateParent() noexcept;
 
   /**
    * Inject a key-press event from outside the message loop.

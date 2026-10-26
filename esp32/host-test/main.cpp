@@ -41,7 +41,8 @@ InjectTouches() noexcept
 
 /* keep the last frame as RGB for the PPM file */
 static void
-FrameReady(const void *pixels, unsigned pitch, void *) noexcept
+FrameReady(const void *pixels, unsigned pitch, const XCSoarEsp32::Rect *,
+           unsigned, void *) noexcept
 {
   InjectTouches();
 

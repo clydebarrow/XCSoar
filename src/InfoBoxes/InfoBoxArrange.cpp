@@ -214,6 +214,10 @@ public:
   }
 
 protected:
+  bool PaintsOverChildren() const noexcept override {
+    return true;
+  }
+
   void OnPaint(Canvas &canvas) noexcept override {
     ContainerWindow::OnPaint(canvas);
     /* after the buttons, so the carried card covers Help/Close

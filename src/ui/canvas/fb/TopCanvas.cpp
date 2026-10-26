@@ -300,9 +300,18 @@ TopCanvas::Flip()
 #endif /* USE_FB */
 
 #ifdef USE_EXTERNAL_FB
-  display.Flip(buffer.data, buffer.pitch);
+  const PixelRect all{buffer.size};
+  display.Flip(buffer.data, buffer.pitch, {&all, 1});
 #endif
 }
+
+#ifdef USE_EXTERNAL_FB
+void
+TopCanvas::Flip(std::span<const PixelRect> dirty)
+{
+  display.Flip(buffer.data, buffer.pitch, dirty);
+}
+#endif
 
 #ifdef KOBO
 

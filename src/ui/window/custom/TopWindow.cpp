@@ -164,7 +164,75 @@ void
 TopWindow::Invalidate() noexcept
 {
   invalidated = true;
+#ifdef USE_EXTERNAL_FB
+  invalidate_all = true;
+#endif
 }
+
+#ifdef USE_EXTERNAL_FB
+
+void
+TopWindow::InvalidateDescendant([[maybe_unused]] const Window &child,
+                                const Window *descendant) noexcept
+{
+  invalidated = true;
+
+  if (invalidate_all)
+    return;
+
+  if (descendant == nullptr || invalid_windows.full())
+    invalidate_all = true;
+  else if (!invalid_windows.contains(descendant))
+    invalid_windows.append(descendant);
+}
+
+static void
+AddToRect(PixelRect &a, const PixelRect &b) noexcept
+{
+  a.left = std::min(a.left, b.left);
+  a.top = std::min(a.top, b.top);
+  a.right = std::max(a.right, b.right);
+  a.bottom = std::max(a.bottom, b.bottom);
+}
+
+bool
+TopWindow::ExposePartial(Canvas &canvas, DamageList &damage) noexcept
+{
+  for (const Window *w : invalid_windows) {
+    const Window *target = w;
+    PixelRect painted{};
+    if (!children.PaintAbove(canvas, {0, 0}, target, painted))
+      return false;
+
+    if (target != nullptr)
+      /* not visible */
+      continue;
+
+    /* merge with the areas it overlaps; with no room left, merge
+       everything into one */
+    for (unsigned i = 0; i < damage.size();) {
+      if (damage[i].OverlapsWith(painted)) {
+        AddToRect(painted, damage[i]);
+        damage.quick_remove(i);
+        /* the larger area may overlap one already passed */
+        i = 0;
+      } else
+        ++i;
+    }
+
+    if (damage.full()) {
+      for (const auto &r : damage)
+        AddToRect(painted, r);
+      damage.clear();
+    }
+
+    damage.append(painted);
+  }
+
+  return true;
+}
+
+#endif
 
 #ifdef DRAW_MOUSE_CURSOR
 
@@ -255,6 +323,11 @@ TopWindow::Expose() noexcept
   const ScopeLockCPU cpu;
 #endif
 
+#ifdef USE_EXTERNAL_FB
+  /* the areas to show; none if nothing changed */
+  DamageList damage;
+#endif
+
 #if defined(ENABLE_SDL) && defined(USE_MEMORY_CANVAS)
   // Process any pending resize BEFORE locking the canvas
   screen->ProcessPendingResize();
@@ -274,7 +347,18 @@ TopWindow::Expose() noexcept
       canvas.Clear(COLOR_BLACK);
 #endif
 
+#ifdef USE_EXTERNAL_FB
+    if (invalidate_all || !ExposePartial(canvas, damage)) {
+      OnPaint(canvas);
+      damage.clear();
+      damage.append(PixelRect{canvas.GetSize()});
+    }
+
+    invalid_windows.clear();
+    invalidate_all = false;
+#else
     OnPaint(canvas);
+#endif
 
 #ifdef DRAW_MOUSE_CURSOR
     if (std::chrono::steady_clock::now() < cursor_visible_until)
@@ -288,7 +372,12 @@ TopWindow::Expose() noexcept
     screen->Unlock();
   }
 
+#ifdef USE_EXTERNAL_FB
+  if (!damage.empty())
+    screen->Flip({damage.begin(), damage.end()});
+#else
   screen->Flip();
+#endif
 
 #if defined(ENABLE_OPENGL) && defined(GL_EXT_discard_framebuffer) && \
   (defined(ANDROID) || defined(MESA_KMS))

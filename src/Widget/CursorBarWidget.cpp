@@ -217,6 +217,10 @@ protected:
       LayoutBar(GetClientRect());
   }
 
+  bool PaintsOverChildren() const noexcept override {
+    return true;
+  }
+
   void OnPaint(Canvas &canvas) noexcept override {
     canvas.Clear(look.background_brush);
     ContainerWindow::OnPaint(canvas);

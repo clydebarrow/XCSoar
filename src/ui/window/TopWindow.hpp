@@ -4,6 +4,7 @@
 #pragma once
 
 #include "ContainerWindow.hpp"
+#include "util/StaticArray.hxx"
 #include "custom/DoubleClick.hpp"
 
 #ifdef ENABLE_OPENGL
@@ -254,6 +255,15 @@ public:
   TopCanvas *screen = nullptr;
 
   bool invalidated;
+
+#ifdef USE_EXTERNAL_FB
+  /**
+   * The windows to repaint at the next Expose(), unless
+   * #invalidate_all is set; see ContainerWindow::InvalidateDescendant().
+   */
+  StaticArray<const Window *, 16> invalid_windows;
+  bool invalidate_all = true;
+#endif
 
 #ifdef ENABLE_OPENGL
   uint32_t render_state_token = 0;
@@ -633,6 +643,19 @@ public:
   void Invalidate() noexcept override;
 
 protected:
+#ifdef USE_EXTERNAL_FB
+  void InvalidateDescendant(const Window &child,
+                            const Window *descendant) noexcept override;
+
+  using DamageList = StaticArray<PixelRect, 8>;
+
+  /**
+   * Repaint only #invalid_windows, and list the areas painted.
+   * Returns false if everything must be repainted instead.
+   */
+  bool ExposePartial(Canvas &canvas, DamageList &damage) noexcept;
+#endif
+
   void Expose() noexcept;
 
 #if defined(USE_X11) || defined(USE_WAYLAND)

@@ -12,6 +12,91 @@
 #include <algorithm>
 #include <iterator>
 
+#ifdef USE_EXTERNAL_FB
+
+[[gnu::pure]]
+static bool
+IsAncestorOf(const Window &w, const Window &descendant) noexcept
+{
+  for (const ContainerWindow *p = descendant.GetParent(); p != nullptr;
+       p = p->GetParent())
+    if (p == &w)
+      return true;
+  return false;
+}
+
+static void
+AddToRect(PixelRect &a, const PixelRect &b) noexcept
+{
+  a.left = std::min(a.left, b.left);
+  a.top = std::min(a.top, b.top);
+  a.right = std::max(a.right, b.right);
+  a.bottom = std::max(a.bottom, b.bottom);
+}
+
+/**
+ * Paint #w, which covers #rc on #canvas.  Returns false if it is not
+ * entirely on the canvas.
+ */
+static bool
+PaintAt(Canvas &canvas, Window &w, const PixelRect &rc) noexcept
+{
+  if (!PixelRect{canvas.GetSize()}.Contains(rc))
+    return false;
+
+  SubCanvas sub_canvas(canvas, rc.GetTopLeft(), rc.GetSize());
+  ((PaintWindow &)w).OnPaint(sub_canvas);
+  return true;
+}
+
+bool
+WindowList::PaintAbove(Canvas &canvas, PixelPoint origin,
+                       const Window *&target, PixelRect &damage) noexcept
+{
+  /* bottom to top, as in Paint() */
+  for (auto i = list.rbegin(), end = list.rend(); i != end; ++i) {
+    Window &child = *i;
+    if (!child.IsVisible())
+      continue;
+
+    const PixelRect rc{origin + child.GetTopLeft(), child.GetSize()};
+
+    if (target != nullptr) {
+      /* below the target: nothing to do, unless the target is in
+         this child */
+      if (&child == target) {
+        if (child.IsTransparent() || !PaintAt(canvas, child, rc))
+          return false;
+        damage = rc;
+        target = nullptr;
+      } else if (IsAncestorOf(child, *target)) {
+        auto &container = (ContainerWindow &)child;
+        if (!container.children.PaintAbove(canvas, rc.GetTopLeft(),
+                                           target, damage))
+          return false;
+      }
+      continue;
+    }
+
+    if (!rc.OverlapsWith(damage))
+      continue;
+
+    /* a transparent window shows what is below it, which is only
+       fresh within the damaged area */
+    if (child.IsTransparent() && !damage.Contains(rc))
+      return false;
+
+    if (!PaintAt(canvas, child, rc))
+      return false;
+
+    AddToRect(damage, rc);
+  }
+
+  return true;
+}
+
+#endif
+
 void
 WindowList::Clear() noexcept
 {

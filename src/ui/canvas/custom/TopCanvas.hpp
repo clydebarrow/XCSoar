@@ -14,6 +14,9 @@
 #include "ui/canvas/memory/ActivePixelTraits.hpp"
 #include "ui/canvas/memory/Buffer.hpp"
 #include "ui/dim/Size.hpp"
+#include "ui/dim/Rect.hpp"
+
+#include <span>
 #endif
 
 #ifdef ENABLE_OPENGL
@@ -276,6 +279,12 @@ public:
    * 
    */
   void Flip();
+#ifdef USE_EXTERNAL_FB
+  /**
+   * Like Flip(), but only #dirty has changed since the last frame.
+   */
+  void Flip(std::span<const PixelRect> dirty);
+#endif
 #ifdef MESA_KMS
   /** \brief Try to finish a pending flip. Return true when no flip is on-going.
    * 

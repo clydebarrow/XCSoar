@@ -9,6 +9,7 @@
 #include <cassert>
 
 struct PixelPoint;
+struct PixelRect;
 class Window;
 class Canvas;
 
@@ -47,6 +48,25 @@ public:
 
   [[gnu::pure]]
   bool Contains(const Window &w) const noexcept;
+
+#ifdef USE_EXTERNAL_FB
+  /**
+   * Repaint #target, and then, in painting order, every visible
+   * window above it that overlaps what was repainted, so a part of
+   * the screen can be repainted without the rest.
+   *
+   * @param origin the position of the list's container on #canvas
+   * @param target the window to repaint, which may be inside one of
+   * the windows in this list; set to nullptr once it has been painted
+   * @param damage the area repainted so far, in #canvas coordinates;
+   * grows with each window painted after #target
+   * @return false if this cannot be done (a transparent window would
+   * have to be painted over itself, or a window is partly off the
+   * canvas); the caller must then repaint everything
+   */
+  bool PaintAbove(Canvas &canvas, PixelPoint origin, const Window *&target,
+                  PixelRect &damage) noexcept;
+#endif
 
   /**
    * Is this window covered by a sibling?

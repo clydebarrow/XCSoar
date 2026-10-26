@@ -244,7 +244,9 @@ ContainerWindow::AddChild(Window &child) noexcept
 void
 ContainerWindow::RemoveChild(Window &child) noexcept
 {
-  InvalidateChild(child);
+  /* repaint everything, and drop any pointer to the child (or a
+     window inside it) from the list of windows to repaint */
+  InvalidateDescendant(child, nullptr);
 
   children.Remove(child);
 
@@ -277,8 +279,21 @@ ContainerWindow::InvalidateChild(const Window &child) noexcept
 {
   AssertThread();
 
-  if (!children.IsCovered(child))
-    Invalidate();
+  InvalidateChildDescendant(child, &child);
+}
+
+void
+ContainerWindow::InvalidateDescendant(const Window &child,
+                                      const Window *descendant) noexcept
+{
+  if (parent == nullptr)
+    return;
+
+  if (descendant == nullptr)
+    parent->InvalidateDescendant(*this, nullptr);
+  else if (IsVisible())
+    parent->InvalidateChildDescendant(*this, PaintsOverChildren()
+                                      ? this : descendant);
 }
 
 void

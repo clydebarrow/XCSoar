@@ -8,6 +8,8 @@
 #include "ui/event/Globals.hpp"
 #include "ui/event/Queue.hpp"
 
+#include <iterator>
+
 namespace XCSoarEsp32 {
 
 unsigned
@@ -21,10 +23,23 @@ BytesPerPixel() noexcept
 }
 
 static void
-FlipToHost(const void *pixels, unsigned pitch, void *ctx) noexcept
+FlipToHost(const void *pixels, unsigned pitch,
+           std::span<const PixelRect> dirty, void *ctx) noexcept
 {
   const auto &config = *static_cast<const Config *>(ctx);
-  config.frame_ready(pixels, pitch, config.ctx);
+
+  /* TopWindow keeps at most 8; merge any more into one */
+  Rect rects[8];
+  unsigned n = 0;
+  if (dirty.size() <= std::size(rects)) {
+    for (const auto &r : dirty)
+      rects[n++] = {unsigned(r.left), unsigned(r.top),
+                    r.GetWidth(), r.GetHeight()};
+  } else {
+    rects[n++] = {0, 0, config.width, config.height};
+  }
+
+  config.frame_ready(pixels, pitch, rects, n, config.ctx);
 }
 
 void
