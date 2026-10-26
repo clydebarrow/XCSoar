@@ -762,6 +762,9 @@ MainWindow::InitialiseConfigured()
   map_rect = infobox_area_rc.Contains(rc)
     ? ib_layout.remaining
     : rc;
+  /* as in ReinitialiseLayout(); without it, widgets such as the
+     traffic radar would span the InfoBoxes until the first resize */
+  area_stack_rect = ib_layout.remaining.Intersection(infobox_area_rc);
 
   menu_bar = new MenuBar(*this, infobox_area_rc, look->dialog.button);
 
