@@ -44,8 +44,10 @@ if(NOT CMAKE_BUILD_EARLY_EXPANSION)
 
   target_include_directories(${COMPONENT_LIB} PRIVATE
     ${fmt_SOURCE_DIR}/include ${boost_SOURCE_DIR})
+  # NDEBUG: a release build, without XCSoar's debug checks and its
+  # "DEBUG BUILD - DO NOT FLY!" banner
   target_compile_definitions(${COMPONENT_LIB} PRIVATE
-    ${XCSOAR_APP_DEFINES} FMT_HEADER_ONLY)
+    ${XCSOAR_APP_DEFINES} FMT_HEADER_ONLY NDEBUG)
 
   # resources.c and output/data/*.c embed files by paths relative to
   # XCSOAR_ROOT

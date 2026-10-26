@@ -64,7 +64,8 @@ LogString(std::string_view s) noexcept
 #ifdef ANDROID
   __android_log_print(ANDROID_LOG_INFO, "XCSoar", "%.*s",
                       int(s.size()), s.data());
-#elif defined(HAVE_POSIX) && !defined(NDEBUG)
+#elif defined(HAVE_POSIX) && (!defined(NDEBUG) || defined(ESP_PLATFORM))
+  /* the ESP32 has no terminal; this goes to the serial console */
   fprintf(stderr, "%.*s\n",
           int(s.size()), s.data());
 #endif
