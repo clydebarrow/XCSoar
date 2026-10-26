@@ -31,8 +31,8 @@ class RasterTileCache {
 #if defined(ANDROID)
   static constexpr unsigned MAX_ACTIVE_TILES = 128;
 #elif defined(ESP_PLATFORM)
-  // 2 MB of PSRAM with 256x256 tiles
-  static constexpr unsigned MAX_ACTIVE_TILES = 16;
+  // 4 MB of PSRAM with 256x256 tiles; fewer are decoded again while panning
+  static constexpr unsigned MAX_ACTIVE_TILES = 32;
 #else
   // desktop: use a lot of memory
   static constexpr unsigned MAX_ACTIVE_TILES = 512;
