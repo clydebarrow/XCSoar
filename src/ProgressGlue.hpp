@@ -13,6 +13,11 @@ namespace ProgressGlue {
  */
 void Create(const char *text) noexcept;
 
+/**
+ * Show no progress window from now on: the program is shutting down.
+ */
+void Disable() noexcept;
+
 void Move(const PixelRect &rc) noexcept;
 
 /**

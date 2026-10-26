@@ -6,7 +6,6 @@
 #include "ui/window/SingleWindow.hpp"
 #include "UIGlobals.hpp"
 #include "time/PeriodClock.hpp"
-#include "Protection.hpp"
 
 static ProgressWindow *global_progress_window;
 
@@ -15,11 +14,12 @@ static ProgressWindow *global_progress_window;
  */
 static PeriodClock throttle_clock;
 
+static bool disabled;
+
 void
 ProgressGlue::Create(const char *text) noexcept
 {
-  /* Skip showing progress dialog during shutdown */
-  if (!global_running)
+  if (disabled)
     return;
 
   UIGlobals::GetMainWindow().RefreshSize();
@@ -31,6 +31,12 @@ ProgressGlue::Create(const char *text) noexcept
 
   UIGlobals::GetMainWindow().Refresh();
   throttle_clock.Reset();
+}
+
+void
+ProgressGlue::Disable() noexcept
+{
+  disabled = true;
 }
 
 void

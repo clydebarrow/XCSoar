@@ -35,6 +35,7 @@
 #include "Language/LanguageGlue.hpp"
 #include "Language/Language.hpp"
 #include "Protection.hpp"
+#include "ProgressGlue.hpp"
 #include "LogFile.hpp"
 #include "UtilsSystem.hpp"
 #include "FLARM/Glue.hpp"
@@ -986,6 +987,7 @@ Shutdown()
 
   // Turn off all displays first to prevent UI operations from blocking
   global_running = false;
+  ProgressGlue::Disable();
 
 #ifdef __APPLE__
   /* stop saving on suspend before we start tearing down the state
