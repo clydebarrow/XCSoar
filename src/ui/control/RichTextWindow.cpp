@@ -1546,6 +1546,18 @@ RichTextWindow::OnPaint(Canvas &canvas) noexcept
     return;
   }
 
+#ifdef ESP_PLATFORM
+  /* too little memory for a copy several screens tall; painting
+     straight to the screen is quick enough */
+  canvas.Clear(background_color);
+  content_hits.clear();
+  PaintContent(canvas, visible_top,
+               visible_top, visible_top + viewport_height);
+  PublishWindowHits(visible_top, viewport_height);
+  DrawFocusOverlay(canvas, visible_top);
+  return;
+#endif
+
   EnsureContentCache(visible_top, viewport_height);
 
   if (!content_cache.IsDefined()) {
