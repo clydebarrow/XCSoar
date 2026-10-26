@@ -11,6 +11,9 @@
 
 Bitmap::Bitmap(Bitmap &&src) noexcept
   :buffer(std::exchange(src.buffer, WritableImageBuffer<BitmapPixelTraits>::Empty())),
+#ifndef GREYSCALE
+   alpha(std::move(src.alpha)),
+#endif
    has_colors(src.has_colors)
 {
 }
@@ -19,6 +22,9 @@ Bitmap &Bitmap::operator=(Bitmap &&src) noexcept
 {
   using std::swap;
   swap(buffer, src.buffer);
+#ifndef GREYSCALE
+  swap(alpha, src.alpha);
+#endif
   swap(has_colors, src.has_colors);
   return *this;
 }
@@ -33,6 +39,9 @@ Bitmap::Load(UncompressedImage &&uncompressed, Type)
 
   has_colors = uncompressed.HasNonGrayscalePixels();
   ImportSurface(buffer, uncompressed);
+#ifndef GREYSCALE
+  alpha = ImportAlpha(uncompressed);
+#endif
   return true;
 }
 
@@ -42,4 +51,7 @@ Bitmap::Reset() noexcept
   assert(!IsDefined() || IsScreenInitialized());
 
   buffer.Free();
+#ifndef GREYSCALE
+  alpha.reset();
+#endif
 }

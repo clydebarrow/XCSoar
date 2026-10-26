@@ -7,6 +7,10 @@
 #include "Buffer.hpp"
 #include "ui/canvas/custom/UncompressedImage.hpp"
 
+#include <algorithm>
+#include <cstdint>
+#include <memory>
+
 struct RGBPixelReader {
   const uint8_t *p;
 
@@ -118,4 +122,39 @@ ImportSurface(WritableImageBuffer<PixelTraits> &buffer,
                                   uncompressed.IsFlipped());
     break;
   }
+}
+
+/**
+ * Copy the alpha channel of an RGBA image, one byte per pixel with no
+ * padding, top row first.  Returns nullptr if the image has no
+ * transparent pixels.
+ */
+static inline std::unique_ptr<uint8_t[]>
+ImportAlpha(const UncompressedImage &uncompressed) noexcept
+{
+  if (uncompressed.GetFormat() != UncompressedImage::Format::RGBA)
+    return nullptr;
+
+  const unsigned width = uncompressed.GetWidth();
+  const unsigned height = uncompressed.GetHeight();
+  const auto *src = (const uint8_t *)uncompressed.GetData();
+  const std::size_t pitch = uncompressed.GetPitch();
+
+  std::unique_ptr<uint8_t[]> alpha;
+  for (unsigned y = 0; y < height; ++y) {
+    const uint8_t *row = src + y * pitch;
+    const unsigned dest_y = uncompressed.IsFlipped() ? height - 1 - y : y;
+    for (unsigned x = 0; x < width; ++x) {
+      const uint8_t a = row[x * 4 + 3];
+      if (a != 0xff && alpha == nullptr) {
+        /* everything before this pixel was opaque */
+        alpha = std::make_unique<uint8_t[]>(std::size_t(width) * height);
+        std::fill_n(alpha.get(), std::size_t(width) * height, 0xff);
+      }
+      if (alpha != nullptr)
+        alpha[std::size_t(dest_y) * width + x] = a;
+    }
+  }
+
+  return alpha;
 }

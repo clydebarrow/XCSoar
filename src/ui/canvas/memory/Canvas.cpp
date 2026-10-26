@@ -368,15 +368,16 @@ void
 Canvas::Copy(PixelPoint dest_position, PixelSize dest_size,
              const Bitmap &src, PixelPoint src_position) noexcept
 {
-  Copy(dest_position, dest_size, src.GetNative(), src_position);
+  if (src.GetAlpha() != nullptr)
+    StretchWithAlpha(dest_position, dest_size, src, src_position, dest_size);
+  else
+    Copy(dest_position, dest_size, src.GetNative(), src_position);
 }
 
 void
 Canvas::Copy(const Bitmap &_src)
 {
-  ConstImageBuffer src = _src.GetNative();
-
-  Copy({0, 0}, src.size, src, {0, 0});
+  Copy({0, 0}, _src.GetSize(), _src, {0, 0});
 }
 
 void
@@ -468,9 +469,12 @@ Canvas::Stretch(PixelPoint dest_position, PixelSize dest_size,
   assert(IsDefined());
   assert(src.IsDefined());
 
-  Stretch(dest_position, dest_size,
-          src.GetNative(),
-          src_position, src_size);
+  if (src.GetAlpha() != nullptr)
+    StretchWithAlpha(dest_position, dest_size, src, src_position, src_size);
+  else
+    Stretch(dest_position, dest_size,
+            src.GetNative(),
+            src_position, src_size);
 }
 
 void
@@ -480,9 +484,74 @@ Canvas::Stretch(PixelPoint dest_position, PixelSize dest_size,
   assert(IsDefined());
   assert(_src.IsDefined());
 
-  ConstImageBuffer src = _src.GetNative();
-  Stretch(dest_position, dest_size,
-          src, {0, 0}, src.size);
+  Stretch(dest_position, dest_size, _src, {0, 0}, _src.GetSize());
+}
+
+#ifndef GREYSCALE
+
+/**
+ * Blend one channel of a color that was blended over white with
+ * opacity #alpha over #dest instead.
+ */
+static constexpr uint8_t
+BlendOverWhite(uint8_t over_white, uint8_t dest, unsigned alpha) noexcept
+{
+  const int c = int(over_white) - int((255 - alpha) * (255u - dest) / 255);
+  return c > 0 ? c : 0;
+}
+
+#endif
+
+void
+Canvas::StretchWithAlpha(PixelPoint dest_position, PixelSize dest_size,
+                         const Bitmap &src,
+                         PixelPoint src_position, PixelSize src_size) noexcept
+{
+#ifdef GREYSCALE
+  Stretch(dest_position, dest_size, src.GetNative(), src_position, src_size);
+#else
+  const uint8_t *alpha = src.GetAlpha();
+  assert(alpha != nullptr);
+
+  if (dest_size.width == 0 || dest_size.height == 0)
+    return;
+
+  const ConstImageBuffer image = src.GetNative();
+  const unsigned image_width = image.size.width;
+
+  const int x0 = std::max(dest_position.x, 0);
+  const int y0 = std::max(dest_position.y, 0);
+  const int x1 = std::min(dest_position.x + int(dest_size.width),
+                          int(GetWidth()));
+  const int y1 = std::min(dest_position.y + int(dest_size.height),
+                          int(GetHeight()));
+
+  for (int y = y0; y < y1; ++y) {
+    const unsigned sy = src_position.y +
+      unsigned(y - dest_position.y) * src_size.height / dest_size.height;
+    auto dest = buffer.At(x0, y);
+
+    for (int x = x0; x < x1; ++x, dest = ActivePixelTraits::Next(dest, 1)) {
+      const unsigned sx = src_position.x +
+        unsigned(x - dest_position.x) * src_size.width / dest_size.width;
+      const unsigned a = alpha[std::size_t(sy) * image_width + sx];
+      if (a == 0)
+        continue;
+
+      const auto c = ActivePixelTraits::ReadPixel(image.At(sx, sy));
+      if (a == 0xff) {
+        ActivePixelTraits::WritePixel(dest, c);
+        continue;
+      }
+
+      const auto d = ActivePixelTraits::ReadPixel(dest);
+      ActivePixelTraits::WritePixel(dest,
+        ActivePixelTraits::color_type(BlendOverWhite(c.Red(), d.Red(), a),
+                                      BlendOverWhite(c.Green(), d.Green(), a),
+                                      BlendOverWhite(c.Blue(), d.Blue(), a)));
+    }
+  }
+#endif
 }
 
 void

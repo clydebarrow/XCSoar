@@ -9,6 +9,9 @@
 #ifdef USE_MEMORY_CANVAS
 #include "ui/canvas/memory/Buffer.hpp"
 #include "ui/canvas/memory/PixelTraits.hpp"
+
+#include <cstdint>
+#include <memory>
 #endif
 
 #ifdef ANDROID
@@ -66,6 +69,15 @@ protected:
   bool flipped = false;
 #elif defined(USE_MEMORY_CANVAS)
   WritableImageBuffer<BitmapPixelTraits> buffer = WritableImageBuffer<BitmapPixelTraits>::Empty();
+
+#ifndef GREYSCALE
+  /**
+   * The opacity of each pixel, one byte each, row by row; null if
+   * the image has no transparent pixels.  #buffer holds the colors
+   * blended over white.
+   */
+  std::unique_ptr<uint8_t[]> alpha;
+#endif
 #endif
 
   /**
@@ -175,6 +187,17 @@ public:
 #elif defined(USE_MEMORY_CANVAS)
   ConstImageBuffer<BitmapPixelTraits> GetNative() const noexcept {
     return buffer;
+  }
+
+  /**
+   * The opacity of each pixel (see #alpha), or nullptr.
+   */
+  const uint8_t *GetAlpha() const noexcept {
+#ifdef GREYSCALE
+    return nullptr;
+#else
+    return alpha.get();
+#endif
   }
 #endif
 

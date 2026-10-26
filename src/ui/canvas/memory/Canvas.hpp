@@ -356,6 +356,14 @@ public:
   void Stretch(PixelPoint dest_position, PixelSize dest_size,
                const Bitmap &src);
 
+  /**
+   * Like Stretch(), but blend the pixels of a bitmap with an alpha
+   * channel (Bitmap::GetAlpha()) over the canvas.
+   */
+  void StretchWithAlpha(PixelPoint dest_position, PixelSize dest_size,
+                        const Bitmap &src,
+                        PixelPoint src_position, PixelSize src_size) noexcept;
+
   void Stretch(const Bitmap &src) {
     Stretch({0, 0}, buffer.size, src);
   }
