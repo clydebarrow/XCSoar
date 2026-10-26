@@ -12,6 +12,7 @@ PORT_SOURCES = \
 
 ifeq ($(TARGET_IS_ESP32),y)
 # serial ports are provided by the host application
+PORT_SOURCES += $(SRC)/Device/Port/HostPort.cpp
 else ifeq ($(HAVE_POSIX),y)
 PORT_SOURCES += \
 	$(SRC)/Device/Port/TTYEnumerator.cpp \

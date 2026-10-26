@@ -36,6 +36,10 @@
 #include "Language/Language.hpp"
 #include "Protection.hpp"
 #include "ProgressGlue.hpp"
+
+#ifdef ESP_PLATFORM
+#include "Device/Port/HostPort.hpp"
+#endif
 #include "LogFile.hpp"
 #include "UtilsSystem.hpp"
 #include "FLARM/Glue.hpp"
@@ -551,6 +555,11 @@ Startup(UI::Display &display)
 
   if (!LoadProfile())
     return false;
+
+#ifdef ESP_PLATFORM
+  /* devices for the streams the application provides */
+  HostPort::ApplyStreams(CommonInterface::SetSystemSettings().devices);
+#endif
 
 #ifdef __APPLE__
   /* now that there is a profile to save, arm the "save on suspend"

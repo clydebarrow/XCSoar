@@ -11,6 +11,10 @@
 #include "Device/Port/TTYEnumerator.hpp"
 #endif
 
+#ifdef ESP_PLATFORM
+#include "Device/Port/HostPort.hpp"
+#endif
+
 #ifdef _WIN32
 # include "system/WindowsRegistry.hpp"
 # include "util/StringFormat.hpp"
@@ -258,11 +262,25 @@ FillAndroidIOIOPorts([[maybe_unused]] DataFieldEnum &df, [[maybe_unused]] const 
 #endif
 }
 
+static void
+FillHostPorts([[maybe_unused]] DataFieldEnum &df,
+              [[maybe_unused]] const DeviceConfig &config) noexcept
+{
+#ifdef ESP_PLATFORM
+  for (const auto &stream : HostPort::GetStreams())
+    AddPort(df, DeviceConfig::PortType::HOST, stream.name);
+
+  if (config.port_type == DeviceConfig::PortType::HOST)
+    SetPort(df, config.port_type, config.path);
+#endif
+}
+
 void
 FillPorts(DataFieldEnum &df, const DeviceConfig &config) noexcept
 {
   FillPortTypes(df, config);
   FillSerialPorts(df, config);
+  FillHostPorts(df, config);
   FillAndroidBluetoothPorts(df, config);
   FillAndroidUsbSerialPorts(df, config);
   FillAndroidIOIOPorts(df, config);
@@ -306,6 +324,7 @@ SetPort(DataFieldEnum &df, const DeviceConfig &config) noexcept
 
   case DeviceConfig::PortType::SERIAL:
   case DeviceConfig::PortType::ANDROID_USB_SERIAL:
+  case DeviceConfig::PortType::HOST:
     SetPort(df, config.port_type, config.path);
     return;
 

@@ -16,6 +16,7 @@
 #endif
 
 #ifdef ESP_PLATFORM
+#include "HostPort.hpp"
 /* serial ports are provided by the host application */
 #elif defined(HAVE_POSIX)
 #include "TTYPort.hpp"
@@ -163,6 +164,17 @@ OpenPortInternal(EventLoop &event_loop, Cares::Channel &cares,
                                 config.port_name,
                                 listener, handler);
   }
+
+  case DeviceConfig::PortType::HOST:
+#ifdef ESP_PLATFORM
+    if (config.path.empty())
+      throw std::runtime_error("No stream configured");
+
+    return std::make_unique<HostPort>(event_loop, config.path.c_str(),
+                                      listener, handler);
+#else
+    throw std::runtime_error("Host streams not available");
+#endif
 
   case DeviceConfig::PortType::PTY: {
 #if defined(HAVE_POSIX) && !defined(ANDROID) && !defined(ESP_PLATFORM)

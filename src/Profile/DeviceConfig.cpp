@@ -37,6 +37,7 @@ static const char *const port_type_strings[] = {
   "glider_link",
   "android_usb_serial",
   "spectate_file",
+  "host",
   NULL
 };
 
@@ -148,8 +149,9 @@ Profile::GetDeviceConfig(const ProfileMap &map, unsigned n,
     config.tcp_port = 4353;
 
   config.path.clear();
-  if (config.port_type == DeviceConfig::PortType::SPECTATE_FILE) {
-    /* Spectate uses Path directly; no COM-index compatibility fallback. */
+  if (config.port_type == DeviceConfig::PortType::SPECTATE_FILE ||
+      config.port_type == DeviceConfig::PortType::HOST) {
+    /* these use Path directly; no COM-index compatibility fallback. */
     LoadPath(map, config, n);
   } else if ((!have_port_type ||
               config.port_type == DeviceConfig::PortType::ANDROID_USB_SERIAL ||

@@ -540,6 +540,7 @@ FinishPortField(DeviceConfig &config, const DataFieldEnum &df) noexcept
   case DeviceConfig::PortType::SERIAL:
   case DeviceConfig::PortType::PTY:
   case DeviceConfig::PortType::ANDROID_USB_SERIAL:
+  case DeviceConfig::PortType::HOST:
     /* Serial Port */
     if (new_type == config.port_type &&
         StringIsEqual(config.path, df.GetAsString()))

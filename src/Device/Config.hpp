@@ -101,6 +101,12 @@ struct DeviceConfig {
      * Poll a Condor 3 Spectate.json file for multiplayer traffic.
      */
     SPECTATE_FILE,
+
+    /**
+     * A stream of data from the application XCSoar runs in, named by
+     * #path (see HostPort).  ESP32 only.
+     */
+    HOST,
   };
 
   /**
@@ -372,6 +378,7 @@ struct DeviceConfig {
     case PortType::UDP_LISTENER:
     case PortType::ANDROID_USB_SERIAL:
     case PortType::SPECTATE_FILE:
+    case PortType::HOST:
       break;
     }
 
@@ -427,6 +434,7 @@ struct DeviceConfig {
     case PortType::UDP_LISTENER:
     case PortType::ANDROID_USB_SERIAL:
     case PortType::SPECTATE_FILE:
+    case PortType::HOST:
       return true;
     }
 

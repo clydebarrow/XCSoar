@@ -61,6 +61,25 @@ struct Rect {
   unsigned x, y, width, height;
 };
 
+/**
+ * A stream of data the host passes to XCSoar with Feed(), for
+ * example GDL90 traffic it received.  XCSoar reads it as a device.
+ */
+struct Stream {
+  /**
+   * The name Feed() uses, which is also shown as the device's port,
+   * e.g. "SkyEcho".
+   */
+  const char *name;
+
+  /**
+   * The XCSoar driver that reads it, e.g. "GDL90" or "FLARM".  When
+   * no device reads the stream, XCSoar sets one up with this driver
+   * in a free device slot.
+   */
+  const char *driver;
+};
+
 struct Config {
   unsigned width, height;
 
@@ -88,6 +107,12 @@ struct Config {
    * symbols by; 0 lets XCSoar assume 96.
    */
   unsigned dpi;
+
+  /**
+   * The streams the host will pass to Feed().  The array and the
+   * strings must stay valid while XCSoar runs.
+   */
+  std::span<const Stream> streams;
 
   /**
    * RunDemo() only: how often the test scene moves on.
@@ -136,5 +161,14 @@ enum class PointerAction : uint8_t {
  */
 void
 InjectPointer(PointerAction action, int x, int y) noexcept;
+
+/**
+ * Pass data to the device reading the stream #name (see
+ * Config::streams).  May be called from any task; the data is copied.
+ * It is dropped while no device reads the stream, or when XCSoar
+ * falls behind.
+ */
+void
+Feed(const char *name, std::span<const std::byte> data) noexcept;
 
 } // namespace XCSoarEsp32

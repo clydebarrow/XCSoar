@@ -3,6 +3,7 @@
 
 #include "Host.hpp"
 #include "XCSoarEsp32.hpp"
+#include "Device/Port/HostPort.hpp"
 #include "ui/canvas/VirtualCanvas.hpp"
 #include "ui/display/Display.hpp"
 #include "ui/event/Globals.hpp"
@@ -67,6 +68,12 @@ InjectPointer(PointerAction action, int x, int y) noexcept
   };
 
   queue->Inject(UI::Event(types[unsigned(action)], PixelPoint(x, y)));
+}
+
+void
+Feed(const char *name, std::span<const std::byte> data) noexcept
+{
+  HostPort::Feed(name, data);
 }
 
 } // namespace XCSoarEsp32

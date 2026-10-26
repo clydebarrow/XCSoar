@@ -58,6 +58,13 @@ DeviceConfig::IsAvailable() const noexcept
 #else
     return false;
 #endif
+
+  case PortType::HOST:
+#ifdef ESP_PLATFORM
+    return true;
+#else
+    return false;
+#endif
   }
 
   /* unreachable */
@@ -100,6 +107,7 @@ DeviceConfig::ShouldReopenOnTimeout() const noexcept
 
   case PortType::PTY:
   case PortType::GLIDER_LINK:
+  case PortType::HOST:
     return false;
   }
 
@@ -299,6 +307,7 @@ DeviceConfig::GetPortName(char *buffer, size_t max_size) const noexcept
     return buffer;
 
   case PortType::SPECTATE_FILE:
+  case PortType::HOST:
     StringFormat(buffer, max_size, "%s", path.c_str());
     return buffer;
   }

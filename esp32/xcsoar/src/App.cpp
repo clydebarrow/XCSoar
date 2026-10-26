@@ -3,6 +3,7 @@
 
 #include "XCSoarEsp32.hpp"
 #include "Host.hpp"
+#include "Device/Port/HostPort.hpp"
 #include "thread/Debug.hpp"
 
 #include <fmt/format.h>
@@ -46,6 +47,8 @@ Run(const Config &config) noexcept
   /* the calling thread is XCSoar's main thread */
   InitThreadDebug();
   ConnectDisplay(config);
+  for (const auto &stream : config.streams)
+    HostPort::AddStream(stream.name, stream.driver);
 
   /* XCSoar takes its screen size and data path from the command
      line */
