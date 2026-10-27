@@ -3,12 +3,16 @@
 
 #include "HostPort.hpp"
 #include "Device/Config.hpp"
+#include "Profile/DeviceConfig.hpp"
+#include "Profile/Keys.hpp"
+#include "Profile/Map.hpp"
 #include "event/Call.hxx"
 #include "util/BindMethod.hxx"
 #include "util/StringAPI.hxx"
 
 #include <algorithm>
 #include <array>
+#include <string>
 
 static constexpr std::size_t MAX_STREAMS = 4;
 
@@ -61,30 +65,66 @@ HostPort::GetStreams() noexcept
   return {streams.data(), n_streams};
 }
 
-void
-HostPort::ApplyStreams(std::span<DeviceConfig> devices) noexcept
+/**
+ * Is #name one of the "|" separated names in #list?
+ */
+[[gnu::pure]]
+static bool
+ListContains(std::string_view list, std::string_view name) noexcept
 {
+  while (!list.empty()) {
+    const auto end = list.find('|');
+    if (list.substr(0, end) == name)
+      return true;
+    if (end == list.npos)
+      break;
+    list.remove_prefix(end + 1);
+  }
+
+  return false;
+}
+
+void
+HostPort::ApplyStreams(ProfileMap &map,
+                       std::span<DeviceConfig> devices) noexcept
+{
+  std::string offered = map.Get(ProfileKeys::HostStreams, "");
+  bool changed = false;
+
   for (const auto &stream : GetStreams()) {
+    if (ListContains(offered, stream.name))
+      continue;
+
     const auto used = std::any_of(devices.begin(), devices.end(),
                                   [&stream](const DeviceConfig &config){
       return config.port_type == DeviceConfig::PortType::HOST &&
         config.path.equals(stream.name);
     });
-    if (used)
-      continue;
+    if (!used) {
+      const auto free = std::find_if(devices.begin(), devices.end(),
+                                     [](const DeviceConfig &config){
+        return config.port_type == DeviceConfig::PortType::DISABLED;
+      });
+      if (free == devices.end())
+        /* try again at the next start */
+        continue;
 
-    const auto free = std::find_if(devices.begin(), devices.end(),
-                                   [](const DeviceConfig &config){
-      return config.port_type == DeviceConfig::PortType::DISABLED;
-    });
-    if (free == devices.end())
-      return;
+      free->Clear();
+      free->port_type = DeviceConfig::PortType::HOST;
+      free->path = stream.name;
+      free->driver_name = stream.driver;
+      Profile::SetDeviceConfig(map, std::distance(devices.begin(), free),
+                               *free);
+    }
 
-    free->Clear();
-    free->port_type = DeviceConfig::PortType::HOST;
-    free->path = stream.name;
-    free->driver_name = stream.driver;
+    if (!offered.empty())
+      offered += '|';
+    offered += stream.name;
+    changed = true;
   }
+
+  if (changed)
+    map.Set(ProfileKeys::HostStreams, offered.c_str());
 }
 
 void

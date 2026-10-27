@@ -13,6 +13,7 @@
 
 struct DeviceConfig;
 class EventLoop;
+class ProfileMap;
 
 /**
  * A port that reads the data the application XCSoar runs in passes
@@ -61,9 +62,12 @@ public:
 
   /**
    * Put each stream that no device reads yet into a disabled device
-   * slot, with its driver.
+   * slot, with its driver, and save that slot to the profile.  Each
+   * stream is offered once: the profile remembers it, so a device the
+   * user removed or moved to another port stays that way.
    */
-  static void ApplyStreams(std::span<DeviceConfig> devices) noexcept;
+  static void ApplyStreams(ProfileMap &map,
+                           std::span<DeviceConfig> devices) noexcept;
 
   /**
    * Pass data to the open port reading the stream #name.  It is

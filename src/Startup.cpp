@@ -558,7 +558,8 @@ Startup(UI::Display &display)
 
 #ifdef ESP_PLATFORM
   /* devices for the streams the application provides */
-  HostPort::ApplyStreams(CommonInterface::SetSystemSettings().devices);
+  HostPort::ApplyStreams(Profile::map,
+                         CommonInterface::SetSystemSettings().devices);
 #endif
 
 #ifdef __APPLE__

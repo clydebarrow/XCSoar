@@ -289,6 +289,9 @@ constexpr std::string_view CloudOwnFlarmId = "CloudOwnFlarmId";
 
 constexpr std::string_view OnlineTrafficMapMode = "OnlineTrafficMapMode";
 
+/* ESP32: the host streams already offered as devices, separated by "|" */
+constexpr std::string_view HostStreams = "HostStreams";
+
 constexpr std::string_view LiveTrack24Enabled = "LiveTrack24Enabled";
 constexpr std::string_view LiveTrack24Server = "LiveTrack24Server";
 constexpr std::string_view LiveTrack24Username = "LiveTrack24Username";
