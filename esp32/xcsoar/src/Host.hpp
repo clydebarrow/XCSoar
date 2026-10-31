@@ -6,6 +6,7 @@
 namespace XCSoarEsp32 {
 
 struct Config;
+struct WifiHost;
 
 /**
  * Send the frames of the XCSoar #UI::Display created after this call
@@ -14,5 +15,12 @@ struct Config;
  */
 void
 ConnectDisplay(const Config &config) noexcept;
+
+/**
+ * Let XCSoar's network settings use the host's Wi-Fi control;
+ * nullptr if there is none.
+ */
+void
+ConnectWifi(const WifiHost *host) noexcept;
 
 } // namespace XCSoarEsp32

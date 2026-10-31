@@ -80,6 +80,112 @@ struct Stream {
   const char *driver;
 };
 
+/**
+ * A Wi-Fi network the host knows of: saved, configured or seen in
+ * the latest scan.
+ */
+struct WifiNetwork {
+  char ssid[33];
+
+  /**
+   * The signal in dBm; 0 when not seen in the latest scan.
+   */
+  int8_t rssi;
+
+  /**
+   * Seen in the latest scan.
+   */
+  bool visible;
+
+  /**
+   * Saved or configured, so it can be joined without a password.
+   */
+  bool known;
+
+  /**
+   * Saved at run time, so it can be forgotten.
+   */
+  bool saved;
+
+  /**
+   * Needs a password.
+   */
+  bool secured;
+
+  /**
+   * SkyEcho (GDL90) data has arrived over it.
+   */
+  bool skyecho;
+
+  /**
+   * The network in use.
+   */
+  bool connected;
+};
+
+enum class WifiState : uint8_t {
+  OFF,
+  CONNECTING,
+  CONNECTED,
+};
+
+struct WifiStatus {
+  WifiState state;
+
+  /**
+   * The host chooses the network (SkyEcho first), rather than the
+   * user.
+   */
+  bool automatic;
+
+  char ssid[33];
+  char ip[46];
+};
+
+/**
+ * Wi-Fi control by the host.  The functions may be called from any
+ * thread and return at once: a request is carried out later, and its
+ * result shows in what #list and #get_status return.
+ */
+struct WifiHost {
+  /**
+   * Copy up to #max networks into #dest and return how many.
+   */
+  unsigned (*list)(WifiNetwork *dest, unsigned max, void *ctx) noexcept;
+
+  void (*get_status)(WifiStatus &status, void *ctx) noexcept;
+
+  /**
+   * Scan for networks, without leaving the network in use.
+   */
+  void (*scan)(void *ctx) noexcept;
+
+  /**
+   * Join #ssid and stay on it until #automatic, #disconnect or a
+   * restart.  A password (empty for an open network) saves the
+   * network first; nullptr joins a known network.
+   */
+  void (*connect)(const char *ssid, const char *password,
+                  void *ctx) noexcept;
+
+  /**
+   * Remove a saved network.
+   */
+  void (*forget)(const char *ssid, void *ctx) noexcept;
+
+  /**
+   * Turn Wi-Fi off until #connect, #automatic or a restart.
+   */
+  void (*disconnect)(void *ctx) noexcept;
+
+  /**
+   * Let the host choose the network again, turning Wi-Fi on.
+   */
+  void (*automatic)(void *ctx) noexcept;
+
+  void *ctx;
+};
+
 struct Config {
   unsigned width, height;
 
@@ -113,6 +219,12 @@ struct Config {
    * strings must stay valid while XCSoar runs.
    */
   std::span<const Stream> streams;
+
+  /**
+   * Wi-Fi control for XCSoar's network settings; nullptr if the host
+   * has none.  Must stay valid while XCSoar runs.
+   */
+  const WifiHost *wifi;
 
   /**
    * RunDemo() only: how often the test scene moves on.

@@ -26,7 +26,8 @@ set(srcs
   esp32/xcsoar/src/App.cpp
   esp32/xcsoar/src/Demo.cpp
   esp32/xcsoar/src/Host.cpp
-  esp32/xcsoar/src/RomFs.cpp)
+  esp32/xcsoar/src/RomFs.cpp
+  esp32/xcsoar/src/Wifi.cpp)
 list(TRANSFORM srcs PREPEND ${XCSOAR_ROOT}/)
 
 set(private_include_dirs ${XCSOAR_APP_INCLUDE_DIRS} src/unix)

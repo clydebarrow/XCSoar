@@ -47,6 +47,7 @@ Run(const Config &config) noexcept
   /* the calling thread is XCSoar's main thread */
   InitThreadDebug();
   ConnectDisplay(config);
+  ConnectWifi(config.wifi);
   for (const auto &stream : config.streams)
     HostPort::AddStream(stream.name, stream.driver);
 

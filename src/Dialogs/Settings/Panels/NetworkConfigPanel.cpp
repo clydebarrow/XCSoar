@@ -33,6 +33,10 @@
 #include "net/wifi/WifiError.hpp"
 #endif
 
+#ifdef ESP_PLATFORM
+#include "net/wifi/HostWifiBackend.hpp"
+#endif
+
 #ifdef ANDROID
 #include "Android/Main.hpp"
 #include "Android/NativeView.hpp"
@@ -103,7 +107,7 @@ GetPlatformWifiIpAddress() noexcept
 }
 #endif
 
-#if defined(KOBO) || defined(HAVE_LINUX_NET_WIFI)
+#if defined(KOBO) || defined(HAVE_LINUX_NET_WIFI) || defined(ESP_PLATFORM)
 static const char *
 GetWifiServiceUnavailableText() noexcept
 {
@@ -122,7 +126,7 @@ GetManagedBySystemSettingsText() noexcept
 static const char *
 GetStatusHelp() noexcept
 {
-#if defined(KOBO) || defined(HAVE_LINUX_NET_WIFI)
+#if defined(KOBO) || defined(HAVE_LINUX_NET_WIFI) || defined(ESP_PLATFORM)
   return _("This page shows WiFi status. Use WiFi list to scan and connect.");
 #elif defined(ANDROID) || defined(_WIN32)
   return _("WiFi is managed by the system settings. Use WiFi list to open them.");
@@ -136,7 +140,7 @@ GetStatusHelp() noexcept
 static const char *
 GetBackendHelp() noexcept
 {
-#if defined(KOBO) || defined(HAVE_LINUX_NET_WIFI) || defined(ANDROID) || defined(_WIN32) || (defined(__APPLE__) && TARGET_OS_IPHONE)
+#if defined(KOBO) || defined(HAVE_LINUX_NET_WIFI) || defined(ANDROID) || defined(_WIN32) || (defined(__APPLE__) && TARGET_OS_IPHONE) || defined(ESP_PLATFORM)
   return _("WiFi service used by the device.");
 #else
   static StaticString<128> message;
@@ -159,6 +163,8 @@ GetInitialBackendName() noexcept
   return "Windows";
 #elif defined(__APPLE__) && TARGET_OS_IPHONE
   return "iOS";
+#elif defined(ESP_PLATFORM)
+  return "ESPHome";
 #else
   return C_("Status", "Unavailable");
 #endif
@@ -190,6 +196,20 @@ PreparePlatformRows(RowFormWidget &widget, unsigned &n, NetworkConfigRows &rows,
   if (rows.have_radio) {
     rows.radio = n++;
     widget.AddBoolean(C_("Setting", "WiFi Enabled"), nullptr, false, &listener);
+  }
+#elif defined(ESP_PLATFORM)
+  if (HostWifiBackend::Create() != nullptr) {
+    rows.radio = n++;
+    rows.have_radio = true;
+    widget.AddBoolean(C_("Setting", "WiFi Enabled"),
+                      _("Turns WiFi on or off until the next restart."),
+                      false, &listener);
+    rows.persist_wifi = n++;
+    rows.have_persist_wifi = true;
+    widget.AddBoolean(C_("Setting", "Automatic network"),
+                      _("Join a SkyEcho when one is in range, otherwise another saved network. "
+                        "Joining a network in the WiFi list turns this off until the next restart."),
+                      true, &listener);
   }
 #else
   (void)widget;
@@ -230,6 +250,15 @@ OpenPlatformWifiList(std::function<void()> refresh) noexcept
     const auto message = WifiError::Format(std::current_exception());
     ShowMessageBox(message.c_str(), _("Network"), MB_OK);
   }
+#elif defined(ESP_PLATFORM)
+  auto backend = HostWifiBackend::Create();
+  if (backend == nullptr) {
+    ShowMessageBox(GetWifiServiceUnavailableText(), _("Network"), MB_OK);
+    return;
+  }
+
+  ShowWifiDialog(std::move(backend));
+  refresh();
 #elif defined(ANDROID)
   if (native_view != nullptr && native_view->OpenWifiSettings(Java::GetEnv()))
     return;
@@ -313,6 +342,25 @@ BuildPlatformState(NetworkConfigState &state,
     const auto message = WifiError::Format(std::current_exception());
     state.status = message.c_str();
   }
+#elif defined(ESP_PLATFORM)
+  (void)rows;
+  state.backend = "ESPHome";
+  auto backend = HostWifiBackend::Create();
+  if (backend == nullptr) {
+    state.status = GetWifiServiceUnavailableText();
+    return;
+  }
+
+  const auto status = backend->GetBackendStatus();
+  state.connectivity = status.state == WifiConnectionState::Connected
+    ? NetState::CONNECTED
+    : NetState::DISCONNECTED;
+  state.status = WifiBackendStatus::Format(status);
+  state.ip = WifiBackendStatus::FormatIpAddress(status);
+  state.have_radio_enabled = true;
+  state.radio_enabled = backend->IsEnabled();
+  state.have_persist_wifi_enabled = true;
+  state.persist_wifi_enabled = backend->IsAutomatic();
 #elif defined(ANDROID)
   state.connectivity = GetNetState();
   state.backend = "Android";
@@ -391,6 +439,23 @@ HandlePlatformModified(RowFormWidget &widget, const NetworkConfigRows &rows,
     const auto message = WifiError::Format(std::current_exception());
     ShowMessageBox(message.c_str(), _("Network"), MB_OK);
     refresh();
+  }
+#elif defined(ESP_PLATFORM)
+  auto backend = HostWifiBackend::Create();
+  if (backend == nullptr)
+    return;
+
+  /* the host carries out a request later, so the state read back now
+     would still be the old one */
+  if (rows.have_radio && widget.IsDataField(rows.radio, df)) {
+    backend->SetEnabled(widget.GetValueBoolean(rows.radio));
+  } else if (rows.have_persist_wifi &&
+             widget.IsDataField(rows.persist_wifi, df)) {
+    if (widget.GetValueBoolean(rows.persist_wifi))
+      backend->SetAutomatic();
+    else
+      /* only joining a network in the WiFi list turns it off */
+      refresh();
   }
 #else
   (void)widget;

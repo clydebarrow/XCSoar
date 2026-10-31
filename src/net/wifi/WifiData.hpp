@@ -16,7 +16,7 @@ TryFormatWifiInterfaceAddress(const char *interface_name,
   if (interface_name == nullptr || *interface_name == 0)
     return false;
 
-#if !defined(_WIN32) && !defined(__BIONIC__)
+#if !defined(_WIN32) && !defined(__BIONIC__) && !defined(ESP_PLATFORM)
   const auto addr = IPv4Address::GetDeviceAddress(interface_name);
   return addr.IsDefined() &&
     addr.ToString(text.buffer(), text.capacity()) != nullptr;
@@ -89,7 +89,7 @@ struct WifiBackendStatus {
       return text;
     }
 
-#if !defined(_WIN32) && !defined(__BIONIC__)
+#if !defined(_WIN32) && !defined(__BIONIC__) && !defined(ESP_PLATFORM)
     if (!TryFormatWifiInterfaceAddress(status.interface_name.c_str(), text))
       text = _("Unknown");
 #else
