@@ -6,6 +6,7 @@
 #include "thread/WorkerThread.hpp"
 #include "Computer/BasicComputer.hpp"
 #include "FLARM/Computer.hpp"
+#include "FLARM/ThreatComputer.hpp"
 #include "NMEA/MoreData.hpp"
 
 class DeviceBlackboard;
@@ -41,6 +42,7 @@ class MergeThread final : public WorkerThread {
 
   BasicComputer computer;
   FlarmComputer flarm_computer;
+  ThreatComputer threat_computer;
 
 public:
   MergeThread(DeviceBlackboard &_device_blackboard,

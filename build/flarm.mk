@@ -14,6 +14,8 @@ FLARM_SOURCES = \
 	$(SRC)/FLARM/Calculations.cpp \
 	$(SRC)/FLARM/Friends.cpp \
 	$(SRC)/FLARM/Computer.cpp \
+	$(SRC)/FLARM/Threat.cpp \
+	$(SRC)/FLARM/ThreatComputer.cpp \
 	$(SRC)/FLARM/Global.cpp \
 	$(SRC)/FLARM/Glue.cpp \
     $(SRC)/FLARM/Details.cpp \

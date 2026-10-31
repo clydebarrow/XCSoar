@@ -103,7 +103,7 @@ TEST_NAMES = \
 	TestWaypointReader TestThermalBase \
 	TestSpeedVector \
 	TestFlarmNet TestFlarmMessaging TestFlarmBinaryProtocol \
-	TestFlarmSpokenAlert \
+	TestFlarmSpokenAlert TestFlarmThreat \
 	TestSpokenAirspaceAlert \
 	TestColorRamp TestXCThermBandQuery TestGeoPoint TestDiffFilter \
 	TestFileUtil TestRepository TestFileType TestMarkdownCheckbox TestPath TestPolars TestCSVLine TestGlidePolar \
@@ -232,6 +232,15 @@ TEST_FLARM_SPOKEN_ALERT_SOURCES = \
 	$(TEST_SRC_DIR)/tap.c \
 	$(TEST_SRC_DIR)/TestFlarmSpokenAlert.cpp
 $(eval $(call link-program,TestFlarmSpokenAlert,TEST_FLARM_SPOKEN_ALERT))
+
+TEST_FLARM_THREAT_SOURCES = \
+	$(SRC)/FLARM/Threat.cpp \
+	$(SRC)/FLARM/ThreatComputer.cpp \
+	$(SRC)/FLARM/Traffic.cpp \
+	$(SRC)/Math/Angle.cpp \
+	$(TEST_SRC_DIR)/tap.c \
+	$(TEST_SRC_DIR)/TestFlarmThreat.cpp
+$(eval $(call link-program,TestFlarmThreat,TEST_FLARM_THREAT))
 
 TEST_SPOKEN_AIRSPACE_ALERT_SOURCES = \
 	$(TEST_SRC_DIR)/tap.c \

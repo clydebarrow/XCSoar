@@ -84,6 +84,7 @@ MergeThread::ProcessUnlocked() noexcept
 
   flarm_computer.Process(device_blackboard.SetBasic().flarm,
                          last_fix.flarm, basic);
+  threat_computer.Process(device_blackboard.SetBasic().flarm, basic);
 }
 
 void
