@@ -23,6 +23,12 @@
 #define HAVE_VOLUME_CONTROLLER
 #endif
 
+/* On the ESP32 the application XCSoar runs in plays the sounds, and
+ * takes the master volume through HostVolume(). */
+#ifdef ESP_PLATFORM
+#define HAVE_HOST_VOLUME
+#endif
+
 /* When HAVE_EXT_VOLUME_CONTROLLER is defined, it means that XCSoar takes
  * control of the audio device's volume level.
  * For now, this is only enabled for Kobo, where a volume controller

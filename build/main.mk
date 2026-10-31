@@ -192,6 +192,10 @@ DIALOG_SOURCES = \
 ifeq ($(HAVE_PCM_PLAYER),y)
 DIALOG_SOURCES += \
 	$(SRC)/Dialogs/Settings/Panels/AudioConfigPanel.cpp
+else ifeq ($(TARGET_IS_ESP32),y)
+# the master volume only, for the host's sounds
+DIALOG_SOURCES += \
+	$(SRC)/Dialogs/Settings/Panels/AudioConfigPanel.cpp
 endif
 
 ifeq ($(HAVE_HTTP),y)

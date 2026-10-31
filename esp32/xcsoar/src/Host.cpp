@@ -5,6 +5,7 @@
 #include "XCSoarEsp32.hpp"
 #include "Device/Port/HostPort.hpp"
 #include "Monitor/HostTrafficAlarm.hpp"
+#include "Audio/HostVolume.hpp"
 #include "ui/canvas/VirtualCanvas.hpp"
 #include "ui/display/Display.hpp"
 #include "ui/event/Globals.hpp"
@@ -88,4 +89,12 @@ HostTrafficAlarm(FlarmTraffic::AlarmType level) noexcept
   const auto *config = XCSoarEsp32::host_config;
   if (config != nullptr && config->traffic_alarm != nullptr)
     config->traffic_alarm(unsigned(level), config->ctx);
+}
+
+void
+HostVolume(unsigned percent, bool preview) noexcept
+{
+  const auto *config = XCSoarEsp32::host_config;
+  if (config != nullptr && config->volume != nullptr)
+    config->volume(percent, preview, config->ctx);
 }

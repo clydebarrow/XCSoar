@@ -39,8 +39,17 @@ public:
 
   using ModifiedCallback = std::function<void()>;
 
+  /**
+   * Called with the combo list item the user highlights while
+   * choosing, before the choice is made: its int_value and
+   * string_value, as SetFromCombo() would get them.
+   */
+  using PreviewCallback = std::function<void(int int_value,
+                                             const char *string_value)>;
+
 private:
   ModifiedCallback on_modified;
+  PreviewCallback on_preview;
 
   DataFieldListener *listener; // deprecated
 
@@ -61,6 +70,14 @@ public:
 
   void SetOnModified(ModifiedCallback &&_callback) noexcept {
     on_modified = std::move(_callback);
+  }
+
+  void SetOnPreview(PreviewCallback &&_callback) noexcept {
+    on_preview = std::move(_callback);
+  }
+
+  const PreviewCallback &GetOnPreview() const noexcept {
+    return on_preview;
   }
 
   // deprecated

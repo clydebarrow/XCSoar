@@ -11,10 +11,15 @@
 #include "Widget/TextWidget.hpp"
 #include "Widget/TwoWidgets.hpp"
 
+#include <functional>
+
 class ListItemRenderer;
 
 /** returns string of item's help text **/
 typedef const char* (*ItemHelpCallback_t)(unsigned item);
+
+/** called with the index of the item the cursor moved to **/
+using CursorCallback = std::function<void(unsigned item)>;
 
 class ListPickerWidget : public ListWidget {
   unsigned num_items;
@@ -37,6 +42,7 @@ class ListPickerWidget : public ListWidget {
 
   const char *const caption, *const help_text;
   ItemHelpCallback_t item_help_callback;
+  CursorCallback cursor_callback;
   TextWidget *help_widget;
   TwoWidgets *two_widgets;
 
@@ -71,6 +77,10 @@ public:
     item_help_callback = _item_help_callback;
     help_widget = &_help_widget;
     two_widgets = &_two_widgets;
+  }
+
+  void SetCursorCallback(CursorCallback &&_cursor_callback) noexcept {
+    cursor_callback = std::move(_cursor_callback);
   }
 
   void UpdateHelp(unsigned index) noexcept
@@ -140,6 +150,8 @@ public:
  * dialog (nullptr disables it)
  * @param extra_caption2 caption of a second extra button that closes the
  * dialog (nullptr disables it)
+ * @param cursor_callback called each time the cursor moves to another
+ * item
  * @return the list index, -1 if the user cancelled the dialog, mrExtra if
  * the user clicked the first extra button, mrExtra2 for the second
  */
@@ -151,4 +163,5 @@ ListPicker(const char *caption,
            const char *help_text = nullptr,
            ItemHelpCallback_t itemhelp_callback = nullptr,
            const char *extra_caption = nullptr,
-           const char *extra_caption2 = nullptr);
+           const char *extra_caption2 = nullptr,
+           CursorCallback cursor_callback = nullptr);

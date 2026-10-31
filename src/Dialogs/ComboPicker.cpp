@@ -62,7 +62,8 @@ ComboPicker(const char *caption,
             const char *help_text,
             bool enable_item_help,
             const char *extra_caption,
-            const char *extra_caption2)
+            const char *extra_caption2,
+            CursorCallback cursor_callback)
 {
   ComboListPopup = &combo_list;
 
@@ -75,7 +76,8 @@ ComboPicker(const char *caption,
                     help_text,
                     enable_item_help ? OnItemHelp : nullptr,
                     extra_caption,
-                    extra_caption2);
+                    extra_caption2,
+                    std::move(cursor_callback));
 }
 
 bool
@@ -94,9 +96,26 @@ ComboPicker(const char *caption, DataField &df,
     const ComboList combo_list = df.CreateComboList(reference);
     ComboListPopup = &combo_list;
 
+    CursorCallback cursor_callback;
+    if (const auto &preview = df.GetOnPreview()) {
+      /* the cursor starts on the current value, which needs no
+         preview */
+      cursor_callback = [&preview, &combo_list,
+                         last = unsigned(combo_list.current_index)](unsigned i) mutable {
+        if (i == last || i >= combo_list.size())
+          return;
+        last = i;
+        const auto &item = combo_list[i];
+        if (item.int_value != ComboList::Item::NEXT_PAGE &&
+            item.int_value != ComboList::Item::PREVIOUS_PAGE)
+          preview(item.int_value, item.string_value.c_str());
+      };
+    }
+
     int idx = ComboPicker(caption, combo_list, help_text,
                           df.GetItemHelpEnabled(),
-                          extra_caption);
+                          extra_caption, nullptr,
+                          std::move(cursor_callback));
     if (idx == mrExtra) {
       if (extra_selected != nullptr)
         *extra_selected = true;

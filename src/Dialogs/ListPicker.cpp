@@ -55,8 +55,11 @@ ListPickerWidget::OnPaintItem(Canvas &canvas, const PixelRect rc,
 }
 
 void
-ListPickerWidget::OnCursorMoved([[maybe_unused]] unsigned index) noexcept
+ListPickerWidget::OnCursorMoved(unsigned index) noexcept
 {
+  if (cursor_callback)
+    cursor_callback(index);
+
   /* Per-item help triggers UpdateLayout(); on e-paper that is too
      expensive to run on every cursor step while scrolling. */
   if (HasEPaper())
@@ -73,7 +76,8 @@ ListPicker(const char *caption,
            const char *help_text,
            ItemHelpCallback_t _itemhelp_callback,
            const char *extra_caption,
-           const char *extra_caption2)
+           const char *extra_caption2,
+           CursorCallback cursor_callback)
 {
   assert(num_items <= 0x7fffffff);
   assert((num_items == 0 && initial_value == 0) || initial_value < num_items);
@@ -89,6 +93,7 @@ ListPicker(const char *caption,
     new ListPickerWidget(num_items, initial_value, item_height,
                          item_renderer, dialog, caption, help_text,
                          empty_extra_action);
+  list_widget->SetCursorCallback(std::move(cursor_callback));
 
   std::unique_ptr<Widget> widget(list_widget);
 

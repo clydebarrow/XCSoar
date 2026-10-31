@@ -4,7 +4,7 @@
 #include "AudioConfigPanel.hpp"
 #include "Audio/Features.hpp"
 
-#ifdef HAVE_PCM_PLAYER
+#if defined(HAVE_PCM_PLAYER) || defined(HAVE_HOST_VOLUME)
 
 #include "Audio/VarioGlue.hpp"
 #include "Audio/VarioSettings.hpp"
@@ -22,10 +22,24 @@
 
 #ifdef HAVE_VOLUME_CONTROLLER
 #include "Audio/VolumeController.hpp"
+
+static constexpr unsigned MAX_MASTER_VOLUME = VolumeController::GetMaxValue();
+#elif defined(HAVE_HOST_VOLUME)
+#include "Audio/HostVolume.hpp"
+#include "util/NumberParser.hpp"
+
+static constexpr unsigned MAX_MASTER_VOLUME = 100;
+#endif
+
+#ifdef HAVE_HOST_VOLUME
+/* fine steps are no use for the host's alarm tones */
+static constexpr unsigned MASTER_VOLUME_STEP = 10;
+#elif defined(HAVE_VOLUME_CONTROLLER)
+static constexpr unsigned MASTER_VOLUME_STEP = 1;
 #endif
 
 enum ControlIndex {
-#ifdef HAVE_VOLUME_CONTROLLER
+#if defined(HAVE_VOLUME_CONTROLLER) || defined(HAVE_HOST_VOLUME)
   MASTER_VOLUME,
   MASTER_VOLUME_SPACER,
 #endif
@@ -107,19 +121,28 @@ AudioConfigPanel::Prepare(ContainerWindow &parent,
 {
   RowFormWidget::Prepare(parent, rc);
 
-#ifdef HAVE_VOLUME_CONTROLLER
+#if defined(HAVE_VOLUME_CONTROLLER) || defined(HAVE_HOST_VOLUME)
   const auto &sound = CommonInterface::GetUISettings().sound;
 
   AddInteger(_("Master Volume"),
              _("The overall audio output volume."),
              "%d %%", "%d",
-             0, VolumeController::GetMaxValue(), 1, sound.master_volume);
+             0, MAX_MASTER_VOLUME, MASTER_VOLUME_STEP,
+             (sound.master_volume + MASTER_VOLUME_STEP / 2) /
+             MASTER_VOLUME_STEP * MASTER_VOLUME_STEP);
+#ifdef HAVE_HOST_VOLUME
+  /* the host plays a short tone at each volume the user highlights */
+  GetDataField(MASTER_VOLUME).SetOnPreview([](int,
+                                              const char *value){
+    HostVolume(ParseUnsigned(value), true);
+  });
+#endif
 #endif
 
   if (!AudioVarioGlue::HaveAudioVario())
     return;
 
-#ifdef HAVE_VOLUME_CONTROLLER
+#if defined(HAVE_VOLUME_CONTROLLER) || defined(HAVE_HOST_VOLUME)
   AddSpacer();
 #endif
 
@@ -193,7 +216,7 @@ AudioConfigPanel::Prepare(ContainerWindow &parent,
 bool
 AudioConfigPanel::Save(bool &changed) noexcept
 {
-#ifdef HAVE_VOLUME_CONTROLLER
+#if defined(HAVE_VOLUME_CONTROLLER) || defined(HAVE_HOST_VOLUME)
   auto &sound = CommonInterface::SetUISettings().sound;
 
   changed |= SaveValueInteger(MASTER_VOLUME, ProfileKeys::MasterAudioVolume,
@@ -241,4 +264,4 @@ CreateAudioConfigPanel()
   return std::make_unique<AudioConfigPanel>();
 }
 
-#endif /* HAVE_PCM_PLAYER */
+#endif

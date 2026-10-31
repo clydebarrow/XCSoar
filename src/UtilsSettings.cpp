@@ -36,6 +36,9 @@
 #include "InfoBoxes/InfoBoxManager.hpp"
 #include "Audio/Features.hpp"
 #include "Audio/GlobalVolumeController.hpp"
+#ifdef HAVE_HOST_VOLUME
+#include "Audio/HostVolume.hpp"
+#endif
 #include "Audio/VarioGlue.hpp"
 #include "Audio/VolumeController.hpp"
 #include "PageActions.hpp"
@@ -267,6 +270,9 @@ SettingsLeave(const UISettings &old_ui_settings)
 
 #ifdef HAVE_VOLUME_CONTROLLER
   volume_controller->SetVolume(ui_settings.sound.master_volume);
+#endif
+#ifdef HAVE_HOST_VOLUME
+  HostVolume(ui_settings.sound.master_volume);
 #endif
 
   AudioVarioGlue::Configure(CommonInterface::GetUISettings().sound.vario);

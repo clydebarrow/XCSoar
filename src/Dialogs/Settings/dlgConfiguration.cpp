@@ -52,7 +52,7 @@
 #include "Panels/NOTAMConfigPanel.hpp"
 #endif
 
-#ifdef HAVE_PCM_PLAYER
+#if defined(HAVE_PCM_PLAYER) || defined(HAVE_HOST_VOLUME)
 #include "Panels/AudioConfigPanel.hpp"
 #endif
 
@@ -174,7 +174,7 @@ static constexpr TabMenuPage online_pages[] = {
 };
 
 static constexpr TabMenuPage setup_pages[] = {
-#ifdef HAVE_PCM_PLAYER
+#if defined(HAVE_PCM_PLAYER) || defined(HAVE_HOST_VOLUME)
   /* Before Units: audio vario deadband uses vertical-speed units. */
   { N_("Audio"), CreateAudioConfigPanel },
 #endif

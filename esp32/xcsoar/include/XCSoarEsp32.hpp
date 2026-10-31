@@ -278,6 +278,16 @@ struct Config {
   void (*traffic_alarm)(unsigned level, void *ctx) noexcept;
 
   /**
+   * Called with the master volume, 0 to 100 percent, from XCSoar's
+   * Audio settings: at startup, whenever the settings are saved, and
+   * with #preview set on each change while the user adjusts it, when
+   * the host should play a short tone at the new volume.  Called on
+   * an XCSoar thread with #ctx; must not block.  nullptr if the host
+   * does not want it.
+   */
+  void (*volume)(unsigned percent, bool preview, void *ctx) noexcept;
+
+  /**
    * Bluetooth LE devices; nullptr if the host has none.  Must stay
    * valid while XCSoar runs.
    */
