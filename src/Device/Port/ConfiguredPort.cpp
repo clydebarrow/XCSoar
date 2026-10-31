@@ -16,6 +16,7 @@
 #endif
 
 #ifdef ESP_PLATFORM
+#include "HostBluetooth.hpp"
 #include "HostPort.hpp"
 /* serial ports are provided by the host application */
 #elif defined(HAVE_POSIX)
@@ -86,6 +87,15 @@ OpenPortInternal(EventLoop &event_loop, Cares::Channel &cares,
     return OpenAndroidBleSerialPort(*bluetooth_helper,
                                     config.bluetooth_mac,
                                     listener, handler);
+#elif defined(ESP_PLATFORM)
+    if (config.bluetooth_mac.empty())
+      throw std::runtime_error("No Bluetooth MAC configured");
+
+    if (!HostBluetooth::IsAvailable())
+      throw std::runtime_error("Bluetooth not available");
+
+    return std::make_unique<HostPort>(event_loop, config.bluetooth_mac.c_str(),
+                                      true, listener, handler);
 #else
     throw std::runtime_error("Bluetooth not available");
 #endif
@@ -171,7 +181,7 @@ OpenPortInternal(EventLoop &event_loop, Cares::Channel &cares,
       throw std::runtime_error("No stream configured");
 
     return std::make_unique<HostPort>(event_loop, config.path.c_str(),
-                                      listener, handler);
+                                      false, listener, handler);
 #else
     throw std::runtime_error("Host streams not available");
 #endif

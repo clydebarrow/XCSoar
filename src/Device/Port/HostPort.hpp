@@ -8,6 +8,7 @@
 #include "util/StaticFifoBuffer.hxx"
 #include "util/StaticString.hxx"
 
+#include <atomic>
 #include <mutex>
 #include <span>
 
@@ -18,7 +19,12 @@ class ProfileMap;
 /**
  * A port that reads the data the application XCSoar runs in passes
  * to Feed(), for example traffic that an ESPHome component received.
- * The data is delivered on the event loop.  Writes are discarded.
+ * The data is delivered on the event loop.
+ *
+ * A stream port discards writes and is always ready.  A Bluetooth
+ * port is named after the device's address: it asks the host to
+ * connect (see HostBluetooth), writes go to the device, and it waits
+ * in PortState::LIMBO while the device is not connected.
  */
 class HostPort final : public BufferedPort {
 public:
@@ -41,13 +47,18 @@ public:
 private:
   const StaticString<32> name;
 
+  const bool bluetooth;
+
+  std::atomic_bool connected{false};
+  std::atomic_bool state_changed{false};
+
   InjectEvent inject;
 
   std::mutex input_mutex;
   StaticFifoBuffer<std::byte, 4096> input;
 
 public:
-  HostPort(EventLoop &event_loop, const char *_name,
+  HostPort(EventLoop &event_loop, const char *_name, bool _bluetooth,
            PortListener *_listener, DataHandler &_handler) noexcept;
   ~HostPort() noexcept override;
 
@@ -76,9 +87,15 @@ public:
    */
   static void Feed(const char *name, std::span<const std::byte> data) noexcept;
 
+  /**
+   * The host has connected to, or lost, the Bluetooth device
+   * #address.  May be called from any task.
+   */
+  static void SetConnected(const char *address, bool connected) noexcept;
+
   /* virtual methods from class Port */
   PortState GetState() const noexcept override {
-    return PortState::READY;
+    return bluetooth && !connected ? PortState::LIMBO : PortState::READY;
   }
 
   bool Drain() override {
@@ -92,9 +109,7 @@ public:
     return 0;
   }
 
-  std::size_t Write(std::span<const std::byte> src) override {
-    return src.size();
-  }
+  std::size_t Write(std::span<const std::byte> src) override;
 
 private:
   void Push(std::span<const std::byte> data) noexcept;

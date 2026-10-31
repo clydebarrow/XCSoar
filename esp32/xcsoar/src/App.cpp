@@ -48,6 +48,7 @@ Run(const Config &config) noexcept
   InitThreadDebug();
   ConnectDisplay(config);
   ConnectWifi(config.wifi);
+  ConnectBluetooth(config.ble);
   for (const auto &stream : config.streams)
     HostPort::AddStream(stream.name, stream.driver);
 

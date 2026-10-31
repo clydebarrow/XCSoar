@@ -26,8 +26,15 @@ DeviceConfig::IsAvailable() const noexcept
   case PortType::SERIAL:
     return true;
 
-  case PortType::RFCOMM:
   case PortType::BLE_SERIAL:
+#ifdef ESP_PLATFORM
+    /* through the host, see HostBluetooth */
+    return true;
+#else
+    return IsAndroid();
+#endif
+
+  case PortType::RFCOMM:
   case PortType::BLE_SENSOR:
   case PortType::RFCOMM_SERVER:
   case PortType::GLIDER_LINK:

@@ -19,9 +19,17 @@
 #include "Android/Main.hpp"
 #include "Android/BluetoothHelper.hpp"
 #include "Android/UsbSerialHelper.hpp"
+#endif
+
+#if defined(ANDROID) || defined(ESP_PLATFORM)
+#define HAVE_DETECT_DEVICE
 #include "Android/DetectDeviceListener.hpp"
 #include "thread/Mutex.hxx"
 #include <list>
+#endif
+
+#ifdef ESP_PLATFORM
+#include "Device/Port/HostBluetooth.hpp"
 #endif
 
 #include <cassert>
@@ -66,7 +74,7 @@ private:
 
 class PortPickerWidget
   : public ListWidget
-#ifdef ANDROID
+#ifdef HAVE_DETECT_DEVICE
   , DetectDeviceListener
 #endif
 {
@@ -81,7 +89,11 @@ class PortPickerWidget
 #ifdef ANDROID
   Java::LocalObject detect_listener;
   Java::LocalObject usb_serial_detect_listener;
+#elif defined(ESP_PLATFORM)
+  bool detect_registered = false;
+#endif
 
+#ifdef HAVE_DETECT_DEVICE
   struct DetectedPort {
     DeviceConfig::PortType type;
     std::string address, name;
@@ -151,6 +163,11 @@ public:
       usb_serial_detect_listener =
         usb_serial_helper->AddDetectDeviceListener(env, *this);
     }
+#elif defined(ESP_PLATFORM)
+    if (HostBluetooth::IsAvailable()) {
+      HostBluetooth::AddDetectListener(*this);
+      detect_registered = true;
+    }
 #endif
   }
 
@@ -166,6 +183,11 @@ public:
       usb_serial_helper->RemoveDetectDeviceListener(usb_serial_detect_listener.GetEnv(),
                                                     usb_serial_detect_listener);
       usb_serial_detect_listener = {};
+    }
+#elif defined(ESP_PLATFORM)
+    if (detect_registered) {
+      HostBluetooth::RemoveDetectListener(*this);
+      detect_registered = false;
     }
 #endif
 
@@ -187,7 +209,7 @@ public:
     dialog.SetModalResult(mrOK);
   }
 
-#ifdef ANDROID
+#ifdef HAVE_DETECT_DEVICE
 private:
   /* virtual methods from class DetectDeviceListener */
   void OnDeviceDetected(Type type, const char *address,
@@ -218,7 +240,7 @@ PortPickerWidget::ReloadComboList() noexcept
   list.Invalidate();
 }
 
-#ifdef ANDROID
+#ifdef HAVE_DETECT_DEVICE
 
 void
 PortPickerWidget::OnDeviceDetected(Type type, const char *address,

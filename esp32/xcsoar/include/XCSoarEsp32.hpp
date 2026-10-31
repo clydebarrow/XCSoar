@@ -186,6 +186,48 @@ struct WifiHost {
   void *ctx;
 };
 
+/**
+ * BleDetected() feature bit: the device has a serial service (HM-10,
+ * Nordic UART or ISSC).  The value of
+ * DetectDeviceListener::FEATURE_BLE_SERIAL.
+ */
+constexpr uint64_t BLE_FEATURE_SERIAL = 0x1;
+
+/**
+ * Bluetooth LE serial devices through the host.  XCSoar keeps which
+ * devices to use; the host connects to them.  The functions may be
+ * called from any thread and must not block.  An address is written
+ * "AA:BB:CC:DD:EE:FF".
+ */
+struct BleHost {
+  /**
+   * Report the devices in range with BleDetected() until #stop_scan.
+   * Each device needs to be reported once per scan.
+   */
+  void (*start_scan)(void *ctx) noexcept;
+
+  void (*stop_scan)(void *ctx) noexcept;
+
+  /**
+   * Connect to the device, and connect again after it is lost, until
+   * #close.  Report the connection with BleConnected() and pass
+   * received data to Feed() with the address as the name.
+   */
+  void (*open)(const char *address, void *ctx) noexcept;
+
+  void (*close)(const char *address, void *ctx) noexcept;
+
+  /**
+   * Send data to the device.  Returns the number of bytes taken; 0
+   * when the host's buffer is full.  Data for a device that is not
+   * connected is taken and dropped.
+   */
+  std::size_t (*write)(const char *address, const std::byte *data,
+                       std::size_t size, void *ctx) noexcept;
+
+  void *ctx;
+};
+
 struct Config {
   unsigned width, height;
 
@@ -225,6 +267,12 @@ struct Config {
    * has none.  Must stay valid while XCSoar runs.
    */
   const WifiHost *wifi;
+
+  /**
+   * Bluetooth LE devices; nullptr if the host has none.  Must stay
+   * valid while XCSoar runs.
+   */
+  const BleHost *ble;
 
   /**
    * RunDemo() only: how often the test scene moves on.
@@ -282,5 +330,21 @@ InjectPointer(PointerAction action, int x, int y) noexcept;
  */
 void
 Feed(const char *name, std::span<const std::byte> data) noexcept;
+
+/**
+ * Report a device found by BleHost::start_scan.  #name may be nullptr
+ * when the device sent none; #features is a set of BLE_FEATURE_* bits.
+ * May be called from any task.
+ */
+void
+BleDetected(const char *address, const char *name,
+            uint64_t features) noexcept;
+
+/**
+ * Report that a device passed to BleHost::open is now connected (and
+ * its serial service ready), or lost.  May be called from any task.
+ */
+void
+BleConnected(const char *address, bool connected) noexcept;
 
 } // namespace XCSoarEsp32

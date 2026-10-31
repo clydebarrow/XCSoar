@@ -7,6 +7,7 @@ namespace XCSoarEsp32 {
 
 struct Config;
 struct WifiHost;
+struct BleHost;
 
 /**
  * Send the frames of the XCSoar #UI::Display created after this call
@@ -22,5 +23,12 @@ ConnectDisplay(const Config &config) noexcept;
  */
 void
 ConnectWifi(const WifiHost *host) noexcept;
+
+/**
+ * Let XCSoar's Bluetooth LE ports use the host's Bluetooth; nullptr if
+ * there is none.
+ */
+void
+ConnectBluetooth(const BleHost *host) noexcept;
 
 } // namespace XCSoarEsp32

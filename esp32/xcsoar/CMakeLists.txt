@@ -24,6 +24,7 @@ include(${app_sources_file})
 set(srcs
   ${XCSOAR_APP_SOURCES}
   esp32/xcsoar/src/App.cpp
+  esp32/xcsoar/src/Bluetooth.cpp
   esp32/xcsoar/src/Demo.cpp
   esp32/xcsoar/src/Host.cpp
   esp32/xcsoar/src/RomFs.cpp

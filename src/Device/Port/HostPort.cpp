@@ -2,6 +2,7 @@
 // Copyright The XCSoar Project
 
 #include "HostPort.hpp"
+#include "HostBluetooth.hpp"
 #include "Device/Config.hpp"
 #include "Profile/DeviceConfig.hpp"
 #include "Profile/Keys.hpp"
@@ -26,16 +27,22 @@ static std::size_t n_streams;
 static std::array<HostPort *, 8> open_ports;
 static std::mutex open_ports_mutex;
 
-HostPort::HostPort(EventLoop &event_loop, const char *_name,
+HostPort::HostPort(EventLoop &event_loop, const char *_name, bool _bluetooth,
                    PortListener *_listener, DataHandler &_handler) noexcept
   :BufferedPort(_listener, _handler),
    name(_name),
+   bluetooth(_bluetooth),
    inject(event_loop, BIND_THIS_METHOD(OnInject))
 {
-  const std::scoped_lock lock{open_ports_mutex};
-  if (auto i = std::find(open_ports.begin(), open_ports.end(), nullptr);
-      i != open_ports.end())
-    *i = this;
+  {
+    const std::scoped_lock lock{open_ports_mutex};
+    if (auto i = std::find(open_ports.begin(), open_ports.end(), nullptr);
+        i != open_ports.end())
+      *i = this;
+  }
+
+  if (bluetooth)
+    HostBluetooth::Open(name.c_str());
 }
 
 HostPort::~HostPort() noexcept
@@ -45,6 +52,9 @@ HostPort::~HostPort() noexcept
     std::replace(open_ports.begin(), open_ports.end(),
                  static_cast<HostPort *>(this), static_cast<HostPort *>(nullptr));
   }
+
+  if (bluetooth)
+    HostBluetooth::Close(name.c_str());
 
   /* OnInject() may be running on the event loop */
   BlockingCall(inject.GetEventLoop(), [this](){
@@ -137,6 +147,28 @@ HostPort::Feed(const char *name, std::span<const std::byte> data) noexcept
 }
 
 void
+HostPort::SetConnected(const char *address, bool connected) noexcept
+{
+  const std::scoped_lock lock{open_ports_mutex};
+  for (HostPort *port : open_ports) {
+    if (port != nullptr && port->bluetooth && port->name.equals(address) &&
+        port->connected.exchange(connected) != connected) {
+      port->state_changed = true;
+      port->inject.Schedule();
+    }
+  }
+}
+
+std::size_t
+HostPort::Write(std::span<const std::byte> src)
+{
+  if (!bluetooth)
+    return src.size();
+
+  return HostBluetooth::Write(name.c_str(), src);
+}
+
+void
 HostPort::Push(std::span<const std::byte> data) noexcept
 {
   {
@@ -155,6 +187,9 @@ HostPort::Push(std::span<const std::byte> data) noexcept
 void
 HostPort::OnInject() noexcept
 {
+  if (state_changed.exchange(false))
+    StateChanged();
+
   std::array<std::byte, 1024> chunk;
 
   while (true) {
