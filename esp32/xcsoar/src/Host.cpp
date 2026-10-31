@@ -4,6 +4,7 @@
 #include "Host.hpp"
 #include "XCSoarEsp32.hpp"
 #include "Device/Port/HostPort.hpp"
+#include "Monitor/HostTrafficAlarm.hpp"
 #include "ui/canvas/VirtualCanvas.hpp"
 #include "ui/display/Display.hpp"
 #include "ui/event/Globals.hpp"
@@ -43,9 +44,12 @@ FlipToHost(const void *pixels, unsigned pitch,
   config.frame_ready(pixels, pitch, rects, n, config.ctx);
 }
 
+static const Config *host_config;
+
 void
 ConnectDisplay(const Config &config) noexcept
 {
+  host_config = &config;
   UI::Display::SetFlipHandler(FlipToHost, const_cast<Config *>(&config));
 
   /* the map buffers grow to the full screen in pan mode; allocating
@@ -77,3 +81,11 @@ Feed(const char *name, std::span<const std::byte> data) noexcept
 }
 
 } // namespace XCSoarEsp32
+
+void
+HostTrafficAlarm(FlarmTraffic::AlarmType level) noexcept
+{
+  const auto *config = XCSoarEsp32::host_config;
+  if (config != nullptr && config->traffic_alarm != nullptr)
+    config->traffic_alarm(unsigned(level), config->ctx);
+}

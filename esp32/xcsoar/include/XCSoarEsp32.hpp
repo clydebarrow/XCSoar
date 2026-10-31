@@ -269,6 +269,15 @@ struct Config {
   const WifiHost *wifi;
 
   /**
+   * Called with the FLARM alarm level (1 low, 2 important, 3 urgent)
+   * on a new traffic alarm and each time it escalates, when XCSoar
+   * would play its alarm, so the host can sound it.  Called on an
+   * XCSoar thread with #ctx; must not block.  nullptr if the host
+   * does not want it.
+   */
+  void (*traffic_alarm)(unsigned level, void *ctx) noexcept;
+
+  /**
    * Bluetooth LE devices; nullptr if the host has none.  Must stay
    * valid while XCSoar runs.
    */

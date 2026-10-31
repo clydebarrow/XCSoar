@@ -6,6 +6,10 @@
 #include "Form/Button.hpp"
 #include "Audio/Sound.hpp"
 
+#ifdef ESP_PLATFORM
+#include "HostTrafficAlarm.hpp"
+#endif
+
 #include <chrono>
 
 using namespace std::chrono;
@@ -88,5 +92,9 @@ TrafficMonitor::Check() noexcept
 
 #ifdef HAVE_VIBRATOR
   PlayHapticFeedback(HapticFeedbackType::ALARM);
+#endif
+
+#ifdef ESP_PLATFORM
+  HostTrafficAlarm(alarm_level);
 #endif
 }
