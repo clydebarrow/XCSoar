@@ -853,4 +853,6 @@ GlueMapWindow::Render(Canvas &canvas, const PixelRect &rc) noexcept
     DrawVario(canvas, layout);
     DrawGPSStatus(canvas, layout, Basic());
   }
+
+  DrawTrafficStatus(canvas, rc, Basic());
 }

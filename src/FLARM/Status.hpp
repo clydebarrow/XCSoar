@@ -68,6 +68,15 @@ struct FlarmStatus {
    */
   bool has_extended;
 
+  /**
+   * Seconds until the intruder is predicted to reach close
+   * proximity.  Only valid if #has_proximity_time is set: XCSoar's
+   * own collision prediction gives it, a FLARM does not.
+   */
+  float proximity_time;
+
+  bool has_proximity_time;
+
   /** Is FLARM information available? */
   Validity available;
 
@@ -76,6 +85,7 @@ struct FlarmStatus {
     has_extended = false;
     has_bearing = false;
     has_vertical = false;
+    has_proximity_time = false;
     relative_bearing = 0;
     alarm_type = 0;
     relative_vertical = 0;

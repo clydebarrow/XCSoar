@@ -626,6 +626,7 @@ XCSOAR_SOURCES := \
 	$(SRC)/Monitor/TaskAdvanceMonitor.cpp \
 	$(SRC)/Monitor/MatTaskMonitor.cpp \
 	$(SRC)/Monitor/TrafficMonitor.cpp \
+	$(SRC)/Monitor/TrafficAlertWidget.cpp \
 	$(SRC)/Monitor/AllMonitors.cpp \
 	\
 	$(SRC)/Hardware/PowerGlobal.cpp \

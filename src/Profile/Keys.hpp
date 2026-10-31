@@ -161,6 +161,7 @@ constexpr std::string_view FadeTraffic = "FadeTraffic";
 constexpr std::string_view EnableFLARMGauge = "EnableFLARMGauge";
 constexpr std::string_view AutoCloseFlarmDialog = "AutoCloseFlarmDialog";
 constexpr std::string_view FlarmSpokenAlerts = "FlarmSpokenAlerts";
+constexpr std::string_view FlarmAlertPopup = "FlarmAlertPopup";
 constexpr std::string_view EnableTAGauge = "EnableTAGauge";
 constexpr std::string_view TAPosition = "TAPosition";
 constexpr std::string_view EnableThermalProfile = "EnableThermalProfile";

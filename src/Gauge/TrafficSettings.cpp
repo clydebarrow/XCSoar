@@ -14,4 +14,10 @@ TrafficSettings::SetDefaults() noexcept
   gauge_location = GaugeLocation::BOTTOM_RIGHT_AVOID_IB;
   no_position_target_distance_ring = true;
   spoken_alerts = false;
+#ifdef ESP_PLATFORM
+  /* a dedicated glide computer, often without a FLARM display */
+  alert_popup = AlertPopup::IMPORTANT;
+#else
+  alert_popup = AlertPopup::OFF;
+#endif
 }

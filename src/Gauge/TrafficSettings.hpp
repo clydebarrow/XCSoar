@@ -24,6 +24,16 @@ struct TrafficSettings {
   /** Speak the collision alarms of FLARM: "Traffic urgent! Three o'clock." */
   bool spoken_alerts;
 
+  /**
+   * The lowest collision alarm level that shows the full screen
+   * traffic alert.  While circling, only an urgent alarm shows it.
+   */
+  enum class AlertPopup : uint8_t {
+    OFF,
+    IMPORTANT,
+    URGENT,
+  } alert_popup;
+
   /** Location of Flarm radar */
   enum class GaugeLocation : uint8_t {
     AUTO,

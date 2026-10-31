@@ -2191,9 +2191,10 @@ MainWindow::UpdateTrafficGaugeVisibility() noexcept
      (CommonInterface::GetUISettings().traffic.enable_gauge &&
       !flarm.traffic.IsEmpty())) &&
     !CommonInterface::GetUIState().screen_blanked &&
-    /* hide the traffic gauge while the traffic widget is visible, to
-       avoid showing the same information twice */
-    !InputEvents::IsFlavour("Traffic");
+    /* hide the traffic gauge while the traffic widget or the traffic
+       alert is visible, to avoid showing the same information twice */
+    !InputEvents::IsFlavour("Traffic") &&
+    !InputEvents::IsFlavour("TrafficAlert");
 
   if (traffic_visible && suppress_traffic_gauge) {
     if (flarm.status.available &&

@@ -56,6 +56,9 @@ class ThreatComputer {
   FlarmStatus status;
   bool has_status = false;
 
+  /** the time to close proximity of #status at #last_time */
+  float proximity_time = 0;
+
 public:
   ThreatComputer() noexcept {
     settings.alarm_time = LOW_TIME;

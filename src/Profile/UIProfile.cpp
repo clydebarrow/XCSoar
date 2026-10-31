@@ -64,6 +64,7 @@ Profile::Load(const ProfileMap &map, TrafficSettings &settings)
   map.Get(ProfileKeys::FlarmRadarZoom, settings.radar_zoom);
   map.Get(ProfileKeys::NoPositionTargetDistanceRing, settings.no_position_target_distance_ring);
   map.Get(ProfileKeys::FlarmSpokenAlerts, settings.spoken_alerts);
+  map.GetEnum(ProfileKeys::FlarmAlertPopup, settings.alert_popup);
 }
 
 void

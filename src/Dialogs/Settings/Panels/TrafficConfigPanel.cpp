@@ -19,6 +19,14 @@ enum ControlIndex {
   NoPositionTargetDistanceRing,
   SpokenAlerts,
   TestSpokenAlert,
+  AlertPopup,
+};
+
+static constexpr StaticEnumChoice alert_popup_list[] = {
+  { TrafficSettings::AlertPopup::OFF, N_("Off") },
+  { TrafficSettings::AlertPopup::IMPORTANT, N_("Important and urgent") },
+  { TrafficSettings::AlertPopup::URGENT, N_("Urgent only") },
+  nullptr
 };
 
 /** Not a GaugeLocation; used only in this panel's Off/position enum. */
@@ -128,6 +136,13 @@ TrafficConfigPanel::Prepare(ContainerWindow &parent,
     PlaySpokenAlertExample();
   });
 
+  AddEnum(_("Alert screen"),
+          _("Cover the screen with the direction, height and distance of "
+            "the traffic when a collision alarm reaches this level, with "
+            "buttons to dismiss it and to mute that aircraft for a minute. "
+            "While circling, only an urgent alarm shows it."),
+          alert_popup_list, (unsigned)ui_settings.traffic.alert_popup);
+
   SetRadarEnabled(ui_settings.traffic.enable_gauge);
 }
 
@@ -167,6 +182,9 @@ TrafficConfigPanel::Save(bool &_changed) noexcept
 
   changed |= SaveValue(SpokenAlerts, ProfileKeys::FlarmSpokenAlerts,
                        ui_settings.traffic.spoken_alerts);
+
+  changed |= SaveValueEnum(AlertPopup, ProfileKeys::FlarmAlertPopup,
+                           ui_settings.traffic.alert_popup);
 
   _changed |= changed;
 

@@ -160,6 +160,7 @@ ThreatComputer::Assess(const FlarmData &flarm, const MoreData &basic) noexcept
   status.relative_distance = uround(double(best->distance));
   status.target_id = best->id;
   status.has_extended = true;
+  proximity_time = best_time;
   has_status = true;
 }
 
@@ -172,7 +173,9 @@ ThreatComputer::Apply(FlarmData &flarm, TimeStamp clock) const noexcept
       traffic->alarm_level = alarm.level;
   }
 
-  if (!has_status)
+  /* the cached alarm lasts only while its target does: without new
+     data the clock stops, and no new assessment clears it */
+  if (!has_status || flarm.traffic.FindTraffic(status.target_id) == nullptr)
     return;
 
   /* a FLARM's own alarm comes first, unless this one is more urgent */
@@ -187,6 +190,13 @@ ThreatComputer::Apply(FlarmData &flarm, TimeStamp clock) const noexcept
   flarm.status = status;
   flarm.status.rx = rx;
   flarm.status.available.Update(clock);
+
+  /* counted down between the assessments */
+  const float elapsed = last_time.IsDefined() && clock >= last_time
+    ? FloatDuration{clock - last_time}.count()
+    : 0.0f;
+  flarm.status.proximity_time = std::max(proximity_time - elapsed, 0.0f);
+  flarm.status.has_proximity_time = true;
 }
 
 void

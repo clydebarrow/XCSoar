@@ -430,6 +430,38 @@ GlueMapWindow::DrawGPSStatus(Canvas &canvas, const MapHudLayout &layout,
 }
 
 void
+GlueMapWindow::DrawTrafficStatus(Canvas &canvas, const PixelRect &rc,
+                                 const NMEAInfo &info) const noexcept
+{
+  if (info.flarm.IsReceiving()) {
+    traffic_receiver_seen = true;
+    return;
+  }
+
+  if (!traffic_receiver_seen && !DEBUG_ALL_MAP_OVERLAYS)
+    return;
+
+  const char *txt = _("No traffic data");
+
+  const Font &font = *look.overlay.overlay_font;
+  canvas.Select(font);
+
+  const unsigned padding = Layout::GetTextPadding() * 2;
+  const PixelSize text_size = canvas.CalcTextSize(txt);
+  const int width = int(text_size.width + 2 * padding);
+  const int height = int(text_size.height + 2 * padding);
+  const int left = rc.left + (int(rc.GetWidth()) - width) / 2;
+  const int top = rc.top + int(padding);
+
+  /* the colors of the important traffic alert */
+  canvas.DrawFilledRectangle({left, top, left + width, top + height},
+                             Color(0xff, 0xb0, 0x00));
+  canvas.SetBackgroundTransparent();
+  canvas.SetTextColor(COLOR_BLACK);
+  canvas.DrawText({left + int(padding), top + int(padding)}, txt);
+}
+
+void
 GlueMapWindow::DrawFlightMode(Canvas &canvas,
                               const MapHudLayout &layout) const noexcept
 {

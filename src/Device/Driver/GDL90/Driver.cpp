@@ -835,6 +835,7 @@ GDL90Device::DataReceived(std::span<const std::byte> s,
 
       switch (msg_id) {
       case GDL90_MSG_HEARTBEAT:
+        info.flarm.receiver.Update(info.clock);
         ParseHeartbeat(payload, info);
         break;
 

@@ -31,8 +31,21 @@ struct FlarmData {
 
   TrafficList traffic;
 
+  /**
+   * A traffic receiver without $PFLAU (an ADS-B receiver through
+   * GDL90) reports that it works.
+   */
+  Validity receiver;
+
   constexpr bool IsDetected() const noexcept {
     return status.available || !traffic.IsEmpty();
+  }
+
+  /**
+   * Is a traffic receiver working, whether or not there is traffic?
+   */
+  constexpr bool IsReceiving() const noexcept {
+    return status.available || receiver;
   }
 
   constexpr void Clear() noexcept {
@@ -43,6 +56,7 @@ struct FlarmData {
     progress.Clear();
     status.Clear();
     traffic.Clear();
+    receiver.Clear();
   }
 
   constexpr void Complement(const FlarmData &add) noexcept {
@@ -53,6 +67,7 @@ struct FlarmData {
     progress.Complement(add.progress);
     status.Complement(add.status);
     traffic.Complement(add.traffic);
+    receiver.Complement(add.receiver);
   }
 
   constexpr void Expire(TimeStamp clock) noexcept {
@@ -63,6 +78,7 @@ struct FlarmData {
     progress.Expire(clock);
     status.Expire(clock);
     traffic.Expire(clock);
+    receiver.Expire(clock, std::chrono::seconds(10));
   }
 };
 

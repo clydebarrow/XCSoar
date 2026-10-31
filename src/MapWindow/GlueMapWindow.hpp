@@ -57,6 +57,9 @@ public:
 
 
 class GlueMapWindow : public MapWindow {
+  /** a traffic receiver has worked since the start */
+  mutable bool traffic_receiver_seen = false;
+
   TopographyThread *topography_thread = nullptr;
 
   TerrainThread *terrain_thread = nullptr;
@@ -443,6 +446,13 @@ private:
                       const MapHudLayout &layout) const noexcept;
   void DrawGPSStatus(Canvas &canvas, const MapHudLayout &layout,
                      const NMEAInfo &info) const noexcept;
+
+  /**
+   * Show "No traffic data" when the traffic receiver that has been
+   * working stops: the collision alarms depend on it.
+   */
+  void DrawTrafficStatus(Canvas &canvas, const PixelRect &rc,
+                         const NMEAInfo &info) const noexcept;
   void DrawCrossHairs(Canvas &canvas) const noexcept;
   void DrawPanInfo(Canvas &canvas,
                    const MapHudLayout &layout) const noexcept;

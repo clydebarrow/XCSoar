@@ -219,6 +219,8 @@ TestComputer() noexcept
   ok1(flarm.status.has_bearing && flarm.status.relative_bearing == 0);
   ok1(flarm.status.relative_distance == 1926);
   ok1(flarm.status.target_id == FlarmId::FromValue(0x7C0001));
+  ok1(flarm.status.has_proximity_time);
+  ok1(Near(flarm.status.proximity_time, 10, 0.1f));
 
   /* the merged data is rebuilt before each call: the alarm is applied
      again from the latest assessment */
@@ -243,6 +245,12 @@ TestComputer() noexcept
   computer.Process(flarm, basic);
   ok1(flarm.status.alarm_level == FlarmTraffic::AlarmType::URGENT);
 
+  /* gone before the next assessment, as when the data stops: the
+     cached alarm is not applied */
+  flarm.Clear();
+  computer.Process(flarm, basic);
+  ok1(!flarm.status.available);
+
   /* once it has gone, nothing is left */
   SetOwnship(basic, At(12));
   flarm.Clear();
@@ -253,7 +261,7 @@ TestComputer() noexcept
 int
 main()
 {
-  plan_tests(36);
+  plan_tests(39);
 
   TestScore();
   TestAlarm();
