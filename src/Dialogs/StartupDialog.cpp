@@ -361,6 +361,7 @@ dlgPilotShowModal() noexcept
     FileDataField profiles;
     profiles.SetFileType(FileType::PROFILE);
     profiles.ScanDirectoryTop(GetFileTypePatterns(FileType::PROFILE));
+    profiles.Sort();
 
     const Path last_pilot = profiles.size() > 0
       ? Path(profiles.GetItem(MostRecentProfile(profiles)).path)
