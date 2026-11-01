@@ -21,6 +21,10 @@
 #include <cassert>
 #include <string.h>
 
+#ifdef ESP_PLATFORM
+#include "HostFill.hpp"
+#endif
+
 class SDLRasterCanvas : public RasterCanvas<ActivePixelTraits> {
 public:
   SDLRasterCanvas(WritableImageBuffer<ActivePixelTraits> buffer)
@@ -50,6 +54,14 @@ Canvas::DrawFilledRectangle(PixelRect r, Color color) noexcept
 {
   if (r.IsEmpty())
     return;
+
+#ifdef ESP_PLATFORM
+  /* the ESP32-P4's PPA fills large areas about six times faster */
+  if (PixelRect c = r.Intersection(GetRect());
+      !c.IsEmpty() && c.GetWidth() * c.GetHeight() >= HOST_FILL_MIN_PIXELS &&
+      HostFill(buffer.data, buffer.pitch, buffer.size.height, c, color))
+    return;
+#endif
 
   SDLRasterCanvas canvas(buffer);
   canvas.FillRectangle(r.left, r.top, r.right, r.bottom,

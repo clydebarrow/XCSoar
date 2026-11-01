@@ -292,6 +292,16 @@ struct Config {
   void (*volume)(unsigned percent, bool preview, void *ctx) noexcept;
 
   /**
+   * Fill #rect of a canvas with #argb (0xAARRGGBB): #buffer has
+   * #height rows #pitch bytes apart, in the format BytesPerPixel()
+   * describes.  Called on XCSoar's drawing threads for large
+   * rectangles only, so the host can use hardware; return false to
+   * let XCSoar fill it.  nullptr if the host has no such hardware.
+   */
+  bool (*fill)(void *buffer, unsigned pitch, unsigned height, Rect rect,
+               uint32_t argb, void *ctx) noexcept;
+
+  /**
    * Bluetooth LE devices; nullptr if the host has none.  Must stay
    * valid while XCSoar runs.
    */

@@ -7,6 +7,42 @@
 #include "ui/dim/Size.hpp"
 
 #include <cstddef>
+#include <new>
+
+#ifdef ESP_PLATFORM
+#include <esp_heap_caps.h>
+#endif
+
+/**
+ * Allocate pixels for an image buffer.  On the ESP32 they are in
+ * PSRAM and aligned to the cache line (64 bytes), so the PPA can fill
+ * them (see HostFill()).
+ */
+template<typename T>
+T *
+AllocatePixels(std::size_t n)
+{
+#ifdef ESP_PLATFORM
+  auto *p = static_cast<T *>(heap_caps_aligned_alloc(64, n * sizeof(T),
+                                                     MALLOC_CAP_SPIRAM));
+  if (p == nullptr)
+    throw std::bad_alloc();
+  return p;
+#else
+  return new T[n];
+#endif
+}
+
+template<typename T>
+void
+FreePixels(T *p) noexcept
+{
+#ifdef ESP_PLATFORM
+  heap_caps_free(p);
+#else
+  delete[] p;
+#endif
+}
 
 /**
  * A reference to an image buffer (or a portion of it) that we can
@@ -32,13 +68,13 @@ struct WritableImageBuffer {
 
   void Allocate(PixelSize _size) noexcept {
     const std::size_t i = PixelTraits::CalcIncrement(_size.width);
-    data = new typename PixelTraits::color_type[i * _size.height];
+    data = AllocatePixels<typename PixelTraits::color_type>(i * _size.height);
     pitch = i * sizeof(typename PixelTraits::color_type);
     size = _size;
   }
 
   void Free() noexcept {
-    delete[] data;
+    FreePixels(data);
     data = nullptr;
   }
 

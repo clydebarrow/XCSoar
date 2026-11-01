@@ -35,7 +35,7 @@ VirtualCanvas::Create(PixelSize new_size) noexcept
         n < reserve && n * 2 >= reserve)
       capacity = reserve;
 
-    buffer.data = new ActivePixelTraits::color_type[capacity];
+    buffer.data = AllocatePixels<ActivePixelTraits::color_type>(capacity);
   }
 
   buffer.pitch = ActivePixelTraits::CalcIncrement(new_size.width) *

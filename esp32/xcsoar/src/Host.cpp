@@ -6,6 +6,7 @@
 #include "Device/Port/HostPort.hpp"
 #include "Monitor/HostTrafficAlarm.hpp"
 #include "Audio/HostVolume.hpp"
+#include "ui/canvas/memory/HostFill.hpp"
 #include "ui/canvas/VirtualCanvas.hpp"
 #include "ui/display/Display.hpp"
 #include "ui/event/Globals.hpp"
@@ -135,6 +136,23 @@ HostTrafficAlarm(FlarmTraffic::AlarmType level) noexcept
   const auto *config = XCSoarEsp32::host_config;
   if (config != nullptr && config->traffic_alarm != nullptr)
     config->traffic_alarm(unsigned(level), config->ctx);
+}
+
+bool
+HostFill(void *buffer, unsigned pitch, unsigned height, const PixelRect &rect,
+         Color color) noexcept
+{
+  const auto *config = XCSoarEsp32::host_config;
+  if (config == nullptr || config->fill == nullptr)
+    return false;
+
+  const uint32_t argb = uint32_t(color.Alpha()) << 24 |
+    uint32_t(color.Red()) << 16 | uint32_t(color.Green()) << 8 |
+    color.Blue();
+  return config->fill(buffer, pitch, height,
+                      {unsigned(rect.left), unsigned(rect.top),
+                       unsigned(rect.GetWidth()), unsigned(rect.GetHeight())},
+                      argb, config->ctx);
 }
 
 void
