@@ -63,6 +63,21 @@ MergeThread::Process() noexcept
   ProcessUnlocked();
 }
 
+/**
+ * On the ground, FLARMs at the airfield report each other, and a FLARM
+ * keeps quiet until it moves: drop the collision alarms, so the traffic
+ * is shown without them until the aircraft flies.
+ */
+static void
+ClearGroundAlarms(FlarmData &flarm) noexcept
+{
+  for (auto &traffic : flarm.traffic.list)
+    traffic.alarm_level = FlarmTraffic::AlarmType::NONE;
+
+  flarm.status.alarm_level = FlarmTraffic::AlarmType::NONE;
+  flarm.status.has_proximity_time = false;
+}
+
 void
 MergeThread::ProcessUnlocked() noexcept
 {
@@ -85,6 +100,9 @@ MergeThread::ProcessUnlocked() noexcept
   flarm_computer.Process(device_blackboard.SetBasic().flarm,
                          last_fix.flarm, basic);
   threat_computer.Process(device_blackboard.SetBasic().flarm, basic);
+
+  if (!device_blackboard.Calculated().flight.flying)
+    ClearGroundAlarms(device_blackboard.SetBasic().flarm);
 }
 
 void
