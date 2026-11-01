@@ -18,6 +18,7 @@
 #include "io/MapFile.hpp"
 #include "io/ProgressReader.hpp"
 #include "io/StringConverter.hpp"
+#include "io/ZipArchive.hpp"
 #include "io/ZipReader.hpp"
 #include "system/Path.hpp"
 
@@ -138,8 +139,11 @@ ReadFileFromProfile(Waypoints &way_points,
     }
   }
 
-  if (auto reader = OpenInMapFile("airfields.txt")) {
-    ProgressReader progress_reader{*reader, reader->GetSize(), progress};
+  /* most map files have no airfields.txt; checking first avoids an
+     exception, which is slow on some platforms */
+  if (auto archive = OpenMapFile(); archive && archive->Exists("airfields.txt")) {
+    ZipReader reader{archive->get(), "airfields.txt"};
+    ProgressReader progress_reader{reader, reader.GetSize(), progress};
     BufferedReader buffered_reader{progress_reader};
     ReadFile(buffered_reader, way_points);
   }

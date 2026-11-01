@@ -231,6 +231,13 @@ try {
   /* not holding the lock here, because this method is only called
      during startup, when the other threads aren't running yet */
 
+  /* checking first avoids an exception, which is slow on some
+     platforms */
+  if (path != nullptr && !path.empty() && !File::Exists(path)) {
+    LogFormat("No rasp data file: %s", path.c_str());
+    return;
+  }
+
   auto archive = OpenArchive();
   if (!archive)
     return;

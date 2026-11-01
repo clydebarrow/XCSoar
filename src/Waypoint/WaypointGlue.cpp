@@ -15,6 +15,7 @@
 #include "io/MapFile.hpp"
 #include "io/ZipArchive.hpp"
 #include "lib/fmt/PathFormatter.hpp"
+#include "system/FileUtil.hpp"
 #include "system/Path.hpp"
 
 namespace WaypointGlue {
@@ -158,10 +159,13 @@ LoadWaypoints(Waypoints &way_points, const RasterTerrain *terrain,
   if (!found)
     found |= LoadMapFiles(way_points, terrain, progress);
 
-  LoadWaypointFile(way_points,
-                   ResolveTypedDataFilePath(FileType::WAYPOINT, "user.cup"),
-                   WaypointFileType::SEEYOU,
-                   WaypointOrigin::USER, 0, terrain, progress);
+  /* most users have no user.cup; checking first avoids an exception,
+     which is slow on some platforms */
+  if (const auto user_path =
+        ResolveTypedDataFilePath(FileType::WAYPOINT, "user.cup");
+      File::Exists(user_path))
+    LoadWaypointFile(way_points, user_path, WaypointFileType::SEEYOU,
+                     WaypointOrigin::USER, 0, terrain, progress);
   way_points.Optimise();
 
   LogFmt("LoadWaypoints: loaded {} waypoints", way_points.size());
