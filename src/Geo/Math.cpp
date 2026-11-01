@@ -11,7 +11,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <tuple>
 
 using namespace WGS84;
 
@@ -372,6 +371,84 @@ Bearing(const GeoPoint &loc1, const GeoPoint &loc2) noexcept
   return bearing;
 }
 
+namespace {
+
+/**
+ * Offsets in radians from a point, in float: the ESP32-P4 and similar
+ * chips have hardware single precision only, and a float offset of up
+ * to a few degrees is precise to a few centimeters.
+ */
+struct GeoOffset {
+  float longitude, latitude;
+};
+
+/**
+ * Vincenty's direct formula, like FindLatitudeLongitude(), for many
+ * bearings from one point, in float.  It is about 1 m off.
+ */
+class FloatVincenty {
+  float lat1, tan_u1, cos_u1, sin_u1;
+
+public:
+  explicit FloatVincenty(Angle latitude) noexcept
+    :lat1(float(latitude.Radians())),
+     tan_u1(float(1 - FLATTENING) * std::tan(lat1)),
+     cos_u1(1 / std::hypot(1.f, tan_u1)),
+     sin_u1(tan_u1 * cos_u1) {}
+
+  GeoOffset operator()(float sin_alpha1, float cos_alpha1,
+                       float distance) const noexcept {
+    constexpr float f = FLATTENING;
+    constexpr float u_factor =
+      (EQUATOR_RADIUS * EQUATOR_RADIUS - POLE_RADIUS * POLE_RADIUS)
+      / (POLE_RADIUS * POLE_RADIUS);
+
+    const float sigma1 = std::atan2(tan_u1, cos_alpha1);
+    const float sin_alpha = cos_u1 * sin_alpha1;
+    const float cos_sq_alpha = 1 - Square(sin_alpha);
+    const float u_sq = cos_sq_alpha * u_factor;
+    const float A = 1 + u_sq / 16384 *
+      (4096 + u_sq * (-768 + u_sq * (320 - 175 * u_sq)));
+    const float B = u_sq / 1024 *
+      (256 + u_sq * (-128 + u_sq * (74 - 47 * u_sq)));
+
+    const float sigma0 = distance / (float(POLE_RADIUS) * A);
+    float sigma = sigma0, sigma_p, sin_sigma, cos_sigma, cos_2_sigma_m;
+    unsigned iterations = 0;
+    do {
+      cos_2_sigma_m = std::cos(2 * sigma1 + sigma);
+      sin_sigma = std::sin(sigma);
+      cos_sigma = std::cos(sigma);
+
+      const float delta_sigma = B * sin_sigma *
+        (cos_2_sigma_m + B / 4 *
+         (cos_sigma * (-1 + 2 * Square(cos_2_sigma_m)) -
+          B / 6 * cos_2_sigma_m * (-3 + 4 * Square(sin_sigma)) *
+          (-3 + 4 * Square(cos_2_sigma_m))));
+
+      sigma_p = sigma;
+      sigma = sigma0 + delta_sigma;
+    } while (std::fabs(sigma - sigma_p) > 1e-7f && ++iterations < 10);
+
+    const float tmp = sin_u1 * sin_sigma - cos_u1 * cos_sigma * cos_alpha1;
+    const float lat2 =
+      std::atan2(sin_u1 * cos_sigma + cos_u1 * sin_sigma * cos_alpha1,
+                 (1 - f) * std::hypot(sin_alpha, tmp));
+    const float lambda =
+      std::atan2(sin_sigma * sin_alpha1,
+                 cos_u1 * cos_sigma - sin_u1 * sin_sigma * cos_alpha1);
+
+    const float C = f / 16 * cos_sq_alpha * (4 + f * (4 - 3 * cos_sq_alpha));
+    const float L = lambda - (1 - C) * f * sin_alpha *
+      (sigma + C * sin_sigma *
+       (cos_2_sigma_m + C * cos_sigma * (-1 + 2 * Square(cos_2_sigma_m))));
+
+    return {L, lat2 - lat1};
+  }
+};
+
+} // namespace
+
 void
 FindArcPoints(const GeoPoint &center, const double radius,
               const Angle start, const Angle step,
@@ -379,65 +456,67 @@ FindArcPoints(const GeoPoint &center, const double radius,
 {
   static constexpr unsigned EXACT_STEPS = 10;
 
-  /* offsets from the center, in radians, on the plane that touches
-     the ellipsoid there, plus the second-order terms of a sphere */
-  constexpr double e2 = FLATTENING * (2 - FLATTENING);
+  const FloatVincenty vincenty{center.latitude};
+  const float distance = radius;
+
+  /* offsets on the plane that touches the ellipsoid at the center,
+     plus the second-order terms of a sphere */
+  constexpr float e2 = FLATTENING * (2 - FLATTENING);
   const auto [sin_lat, cos_lat] = center.latitude.SinCos();
-  const double w = std::sqrt(1 - e2 * Square(sin_lat));
-  const double north = radius * w * w * w / (EQUATOR_RADIUS * (1 - e2));
-  const double east = radius * w / (EQUATOR_RADIUS * cos_lat);
-  const double tan_lat = sin_lat / cos_lat;
-  const double d = radius * w / EQUATOR_RADIUS;
+  const float w = std::sqrt(1 - e2 * Square(float(sin_lat)));
+  const float north = distance * w * w * w / (float(EQUATOR_RADIUS) * (1 - e2));
+  const float east = distance * w / (float(EQUATOR_RADIUS) * float(cos_lat));
+  const float tan_lat = sin_lat / cos_lat;
+  const float d = distance * w / float(EQUATOR_RADIUS);
 
-  struct Offset { double longitude, latitude; };
-
-  const auto approximate = [&](double sin_b, double cos_b) noexcept {
-    return Offset{
+  const auto approximate = [&](float sin_b, float cos_b) noexcept {
+    return GeoOffset{
       east * sin_b * (1 + d * cos_b * tan_lat),
-      north * cos_b - 0.5 * Square(d) * Square(sin_b) * tan_lat,
+      north * cos_b - 0.5f * Square(d) * Square(sin_b) * tan_lat,
     };
   };
 
-  const auto to_point = [&](Offset o) noexcept {
-    return GeoPoint(center.longitude + Angle::Radians(o.longitude),
-                    center.latitude + Angle::Radians(o.latitude));
-  };
-
-  /* the exact point at step #i and the approximation's error there */
-  const auto exact = [&](unsigned i, double &sin_b, double &cos_b,
-                         Offset &error) noexcept {
-    const Angle bearing = start + step * double(i);
-    std::tie(sin_b, cos_b) = bearing.SinCos();
-    const GeoPoint p = FindLatitudeLongitude(center, bearing, radius);
-    const Offset a = approximate(sin_b, cos_b);
-    error = {
-      (p.longitude - center.longitude).AsDelta().Radians() - a.longitude,
-      (p.latitude - center.latitude).Radians() - a.latitude,
-    };
+  const auto to_point = [&](GeoOffset o) noexcept {
+    GeoPoint p(center.longitude + Angle::Radians(o.longitude),
+               center.latitude + Angle::Radians(o.latitude));
+    p.Normalize();
     return p;
   };
 
-  const auto [step_sin, step_cos] = step.SinCos();
+  /* the bearing at step #i, and the approximation's error there */
+  const auto exact = [&](unsigned i, float &sin_b, float &cos_b,
+                         GeoOffset &error) noexcept {
+    const auto [s, c] = (start + step * double(i)).SinCos();
+    sin_b = s;
+    cos_b = c;
+    const GeoOffset e = vincenty(sin_b, cos_b, distance);
+    const GeoOffset a = approximate(sin_b, cos_b);
+    error = {e.longitude - a.longitude, e.latitude - a.latitude};
+    return e;
+  };
+
+  const auto [step_sin_d, step_cos_d] = step.SinCos();
+  const float step_sin = step_sin_d, step_cos = step_cos_d;
   const unsigned count = points.size();
 
-  double sin_b, cos_b;
-  Offset error0;
+  float sin_b, cos_b;
+  GeoOffset error0;
   exact(0, sin_b, cos_b, error0);
 
   for (unsigned first = 0; first < count;) {
     const unsigned last = std::min(first + EXACT_STEPS, count);
-    double last_sin, last_cos;
-    Offset error1;
-    points[last - 1] = exact(last, last_sin, last_cos, error1);
+    float last_sin, last_cos;
+    GeoOffset error1;
+    points[last - 1] = to_point(exact(last, last_sin, last_cos, error1));
 
     for (unsigned i = first + 1; i < last; ++i) {
       /* rotate by one step */
-      const double next_sin = sin_b * step_cos + cos_b * step_sin;
+      const float next_sin = sin_b * step_cos + cos_b * step_sin;
       cos_b = cos_b * step_cos - sin_b * step_sin;
       sin_b = next_sin;
 
-      const double t = double(i - first) / double(last - first);
-      const Offset a = approximate(sin_b, cos_b);
+      const float t = float(i - first) / float(last - first);
+      const GeoOffset a = approximate(sin_b, cos_b);
       points[i - 1] = to_point({
         a.longitude + error0.longitude + (error1.longitude - error0.longitude) * t,
         a.latitude + error0.latitude + (error1.latitude - error0.latitude) * t,

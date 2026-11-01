@@ -99,10 +99,10 @@ GeoPoint FindLatitudeLongitude(const GeoPoint &loc,
  * Fill #points with the points on a circle around #center, at the
  * bearings start + step, start + 2 * step, and so on.
  *
- * Every tenth point comes from FindLatitudeLongitude(); the points
- * in between come from a local approximation that is corrected
- * towards those, which is much faster.  The error is below one meter
- * for radii up to 100 km, except near the poles.
+ * Every tenth point comes from the formula of FindLatitudeLongitude()
+ * in float; the points in between come from a local approximation
+ * that is corrected towards those, which is much faster.  The error
+ * is about two meters for radii up to 100 km, except near the poles.
  */
 void
 FindArcPoints(const GeoPoint &center, double radius,
