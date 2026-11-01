@@ -25,8 +25,13 @@ static constexpr const char *CLUB_FLIGHTS_PENDING = "flights-pending.jsonl";
  *   "organisation": "Warwick Gliding Club",
  *   "logo": "club-logo.png",
  *   "glider": { "type": "PW6", "registration": "WGQ" },
- *   "flight_upload_url": "https://example.org/flights"
+ *   "flight_upload_url": "https://example.org/flights",
+ *   "flight_upload_key": "a secret shared with the server"
  * }
+ *
+ * The host that sends the flights reads "flight_upload_key" itself:
+ * each request carries "X-Signature: sha256=" and the HMAC-SHA256 of
+ * its body with that key, in hex.
  */
 struct ClubConfig {
   std::string organisation;
