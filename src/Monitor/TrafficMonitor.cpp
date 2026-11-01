@@ -168,12 +168,24 @@ IsWarning(FlarmTraffic::AlarmType level) noexcept
     level != FlarmTraffic::AlarmType::INFO_ALERT;
 }
 
+/**
+ * Collision alarms count only in flight: on the ground, FLARMs at the
+ * airfield report each other, and a FLARM keeps quiet until it moves.
+ */
+[[gnu::pure]]
+static bool
+IsFlying() noexcept
+{
+  return CommonInterface::Calculated().flight.flying;
+}
+
 void
 TrafficMonitor::CheckAlert() noexcept
 {
   const auto &basic = CommonInterface::Basic();
   const auto &status = basic.flarm.status;
-  const bool is_warning = status.available && IsWarning(status.alarm_level);
+  const bool is_warning = status.available && IsWarning(status.alarm_level) &&
+    IsFlying();
 
   if (!is_warning || status.alarm_type != ALARM_TYPE_AIRCRAFT) {
     dismissed_id = FlarmId::Undefined();
@@ -229,7 +241,7 @@ TrafficMonitor::Check() noexcept
 {
   const auto &status = CommonInterface::Basic().flarm.status;
 
-  const auto alarm_level = status.available
+  const auto alarm_level = status.available && IsFlying()
     ? status.alarm_level
     : FlarmTraffic::AlarmType::NONE;
 
@@ -245,7 +257,7 @@ TrafficMonitor::Check() noexcept
 
   CheckAlert();
 
-  if (IsMuted()) {
+  if (!IsFlying() || IsMuted()) {
     spoken.reset();
     return;
   }
