@@ -26,9 +26,6 @@ MultiFileDataField::Find(Path path) const
 void
 MultiFileDataField::AddInitialPath(Path text)
 {
-  // file_datafield must be loaded to perform a Find()
-  if (file_datafield.GetNumFiles() == 0) return;
-
   current_selection.push_back(text);
   original_selection.push_back(text);
 
@@ -204,13 +201,13 @@ MultiFileDataField::UpdateDisplayString()
     }
     first = false;
 
-    auto index = file_datafield.Find(path);
-    if (index >= 0)
-      display_string += file_datafield.GetItem(index).filename.c_str();
-    else {
+    /* without Find(): that would scan the data directory for the
+       file list (0.6 s each on the ESP32's SD card), which is only
+       needed when the list is opened */
+    const auto base = path.GetBase();
+    display_string += (base != nullptr) ? base.c_str() : path.c_str();
+    if (!File::Exists(path)) {
       /* file configured in profile but not found on disk */
-      auto base = path.GetBase();
-      display_string += (base != nullptr) ? base.c_str() : path.c_str();
       display_string += " [";
       display_string += _("Not found");
       display_string += "]";
