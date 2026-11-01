@@ -3,6 +3,7 @@
 
 #include "GlueFlightLogger.hpp"
 #include "Blackboard/LiveBlackboard.hpp"
+#include "ClubConfig.hpp"
 
 GlueFlightLogger::GlueFlightLogger(LiveBlackboard &_blackboard)
   :blackboard(_blackboard)
@@ -20,4 +21,12 @@ GlueFlightLogger::OnCalculatedUpdate(const MoreData &basic,
                                      const DerivedInfo &calculated)
 {
   FlightLogger::Tick(basic, calculated);
+}
+
+void
+GlueFlightLogger::OnFlight(const BrokenDateTime &takeoff,
+                           const BrokenDateTime &landing) noexcept
+{
+  SaveClubFlight(takeoff, landing,
+                 blackboard.GetComputerSettings().logger.pilot_name);
 }

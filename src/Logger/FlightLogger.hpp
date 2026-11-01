@@ -35,10 +35,18 @@ class FlightLogger {
 
   BrokenDateTime landing_time;
 
+  /**
+   * The confirmed start of the current flight, kept until its landing
+   * is logged.
+   */
+  BrokenDateTime takeoff_time;
+
 public:
   FlightLogger() {
     Reset();
   }
+
+  virtual ~FlightLogger() noexcept = default;
 
   /**
    * Call this before Tick().
@@ -53,6 +61,13 @@ public:
    * Call this periodically.
    */
   void Tick(const MoreData &basic, const DerivedInfo &calculated);
+
+protected:
+  /**
+   * Called after the landing of a flight whose start was logged.
+   */
+  virtual void OnFlight([[maybe_unused]] const BrokenDateTime &takeoff,
+                        [[maybe_unused]] const BrokenDateTime &landing) noexcept {}
 
 private:
   void LogEvent(const BrokenDateTime &date_time, const char *type);

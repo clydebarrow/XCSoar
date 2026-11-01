@@ -4,12 +4,19 @@
 #include "ClubConfig.hpp"
 #include "LocalPath.hpp"
 #include "LogFile.hpp"
+#include "io/BufferedOutputStream.hxx"
+#include "io/FileOutputStream.hxx"
 #include "io/FileReader.hxx"
 #include "json/Parse.hxx"
 #include "system/FileUtil.hpp"
 #include "system/Path.hpp"
+#include "time/BrokenDateTime.hpp"
 
+#include <boost/json/serialize.hpp>
 #include <boost/json/value.hpp>
+
+#include <chrono>
+#include <fmt/format.h>
 
 static ClubConfig club_config;
 
@@ -59,4 +66,43 @@ const ClubConfig &
 GetClubConfig() noexcept
 {
   return club_config;
+}
+
+static std::string
+FormatUTC(const BrokenDateTime &t) noexcept
+{
+  return fmt::format("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
+                     t.year, t.month, t.day, t.hour, t.minute, t.second);
+}
+
+void
+SaveClubFlight(const BrokenDateTime &takeoff, const BrokenDateTime &landing,
+               const char *pilot) noexcept
+try {
+  if (club_config.flight_upload_url.empty())
+    return;
+
+  const auto duration = std::chrono::duration_cast<std::chrono::seconds>(landing - takeoff);
+
+  boost::json::object flight;
+  flight["organisation"] = club_config.organisation;
+  flight["glider_type"] = club_config.glider_type;
+  flight["registration"] = club_config.glider_registration;
+  flight["pilot"] = pilot;
+  flight["takeoff"] = FormatUTC(takeoff);
+  flight["landing"] = FormatUTC(landing);
+  flight["duration"] = duration.count();
+
+  FileOutputStream file(LocalPath(CLUB_FLIGHTS_PENDING),
+                        FileOutputStream::Mode::APPEND_OR_CREATE);
+  BufferedOutputStream writer(file);
+  writer.Write(boost::json::serialize(flight));
+  writer.Write('\n');
+  writer.Flush();
+  file.Commit();
+
+  LogFormat("Club flight queued: %s to %s",
+            FormatUTC(takeoff).c_str(), FormatUTC(landing).c_str());
+} catch (...) {
+  LogError(std::current_exception(), "Failed to queue the club flight");
 }

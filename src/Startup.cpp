@@ -941,7 +941,9 @@ Startup(UI::Display &display)
 
   all_monitors = new AllMonitors();
 
-  if (!is_simulator() && computer_settings.logger.enable_flight_logger) {
+  /* the club's flight upload needs the takeoff and landing times */
+  if (!is_simulator() && (computer_settings.logger.enable_flight_logger ||
+                          !GetClubConfig().flight_upload_url.empty())) {
     backend_components->flight_logger = std::make_unique<GlueFlightLogger>(live_blackboard);
     backend_components->flight_logger->SetPath(
       LogsDataSavePath("flights.log"));

@@ -15,6 +15,7 @@ FlightLogger::Reset()
   seen_on_ground = seen_flying = false;
   start_time.Clear();
   landing_time.Clear();
+  takeoff_time.Clear();
 }
 
 void
@@ -54,6 +55,7 @@ FlightLogger::TickInternal(const MoreData &basic,
 
       LogEvent(start_time, "start");
 
+      takeoff_time = start_time;
       start_time.Clear();
     }
   }
@@ -68,6 +70,10 @@ FlightLogger::TickInternal(const MoreData &basic,
 
       LogEvent(landing_time, "landing");
 
+      if (takeoff_time.IsPlausible())
+        OnFlight(takeoff_time, landing_time);
+
+      takeoff_time.Clear();
       landing_time.Clear();
     }
   }

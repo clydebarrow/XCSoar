@@ -5,6 +5,16 @@
 
 #include <string>
 
+struct BrokenDateTime;
+
+/**
+ * Flights waiting to be sent to #ClubConfig::flight_upload_url, one
+ * JSON object per line, in the data directory.  The host that sends
+ * them renames the file first, so lines appended while it sends go
+ * into a new file.
+ */
+static constexpr const char *CLUB_FLIGHTS_PENDING = "flights-pending.jsonl";
+
 /**
  * Settings of a club and of the glider the unit is fitted to, read
  * from "club.json" in the data directory.  They belong to the unit,
@@ -44,3 +54,12 @@ LoadClubConfig() noexcept;
 [[gnu::pure]]
 const ClubConfig &
 GetClubConfig() noexcept;
+
+/**
+ * Queue a flight for #ClubConfig::flight_upload_url, if there is one:
+ * the takeoff and landing (UTC), the duration in seconds, the pilot,
+ * the glider and the club.
+ */
+void
+SaveClubFlight(const BrokenDateTime &takeoff, const BrokenDateTime &landing,
+               const char *pilot) noexcept;

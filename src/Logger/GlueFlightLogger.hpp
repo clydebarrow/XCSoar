@@ -33,6 +33,11 @@ public:
 
   void Reset();
 
+protected:
+  /* virtual methods from FlightLogger */
+  void OnFlight(const BrokenDateTime &takeoff,
+                const BrokenDateTime &landing) noexcept override;
+
 private:
   virtual void OnCalculatedUpdate(const MoreData &basic,
                                   const DerivedInfo &calculated);
