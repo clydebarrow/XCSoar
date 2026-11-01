@@ -138,6 +138,10 @@ struct WifiStatus {
    */
   bool automatic;
 
+  /**
+   * The network in use; while #CONNECTING, the one being joined by
+   * hand, or empty.
+   */
   char ssid[33];
   char ip[46];
 };

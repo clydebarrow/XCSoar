@@ -125,9 +125,17 @@ struct WifiNetworkEntry {
   bool can_disconnect = false;
   bool can_forget = false;
 
+  /** being joined, but not connected yet */
+  bool connecting = false;
+
   static StaticString<64> FormatState(const WifiNetworkEntry &entry) {
     StaticString<64> text;
     text.clear();
+
+    if (entry.connecting) {
+      text = _("Connecting...");
+      return text;
+    }
 
     if (entry.kind == WifiNetworkKind::ConnectedNetwork) {
       if (!entry.ip_address.empty()) {
@@ -178,6 +186,7 @@ struct WifiNetworkEntry {
     can_connect = false;
     can_disconnect = false;
     can_forget = false;
+    connecting = false;
   }
 };
 

@@ -4,6 +4,7 @@
 #include "Host.hpp"
 #include "XCSoarEsp32.hpp"
 #include "net/wifi/HostWifiBackend.hpp"
+#include "util/StringAPI.hxx"
 
 #include <algorithm>
 
@@ -100,6 +101,9 @@ HostWifiBackend::GetNetworks(WifiNetworkEntry *dest, std::size_t max)
         ? WifiNetworkKind::SavedProfile
         : WifiNetworkKind::VisibleAccessPoint;
       entry.can_connect = network.known || network.visible;
+      entry.connecting =
+        status.state == XCSoarEsp32::WifiState::CONNECTING &&
+        StringIsEqual(network.ssid, status.ssid);
     }
   }
 
