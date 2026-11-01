@@ -254,6 +254,7 @@ public:
     auto &list = CreateList(parent, UIGlobals::GetDialogLook(), rc,
                             GetRowHeight());
     list.SetLength(profiles.size());
+    list.SetActivateOnFirstClick(true);
     if (profiles.size() > 0)
       list.SetCursorIndex(MostRecentProfile(profiles));
   }
