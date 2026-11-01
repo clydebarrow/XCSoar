@@ -7,6 +7,11 @@
 #include "MainWindow.hpp"
 #include "PageActions.hpp"
 #include "Input/InputEvents.hpp"
+#include "Components.hpp"
+#include "BackendComponents.hpp"
+#include "Logger/Logger.hpp"
+
+#include <stdio.h>
 #include "Form/Button.hpp"
 #include "Audio/Sound.hpp"
 
@@ -90,8 +95,35 @@ TrafficMonitor::CloseAlert() noexcept
   PageActions::ScheduleUpdate();
 }
 
+/**
+ * Record the pilot's answer to the alert in the IGC file, next to the
+ * traffic that LogComputer writes: "LXCSUSR,hhmmss,DISMISS,id".
+ */
+static void
+LogAlertAction(const char *action) noexcept
+try {
+  if (backend_components == nullptr || !backend_components->igc_logger)
+    return;
+
+  const auto &basic = CommonInterface::Basic();
+  const BrokenTime &time = basic.date_time_utc;
+  char line[48];
+  snprintf(line, sizeof(line), "USR,%02u%02u%02u,%s,%06X",
+           time.hour, time.minute, time.second, action,
+           unsigned(basic.flarm.status.target_id.Value()));
+  backend_components->igc_logger->LogComment(line);
+} catch (...) {
+}
+
 void
 TrafficMonitor::DismissAlert() noexcept
+{
+  LogAlertAction("DISMISS");
+  DismissAlertQuietly();
+}
+
+void
+TrafficMonitor::DismissAlertQuietly() noexcept
 {
   const auto &status = CommonInterface::Basic().flarm.status;
   dismissed_id = status.target_id;
@@ -121,7 +153,8 @@ TrafficMonitor::MuteAlert() noexcept
                          FlarmTraffic::AlarmType::IMPORTANT);
   muted_until = steady_clock::now() + MUTE_DURATION;
   spoken.reset();
-  DismissAlert();
+  LogAlertAction("MUTE");
+  DismissAlertQuietly();
 }
 
 /**

@@ -123,6 +123,7 @@ public:
    */
   void StopLogger(const NMEAInfo &gps_info);
   void LoggerNote(const char *text);
+  void LogComment(const char *text);
   void LogGPSSource(const NMEAInfo &gps_info, char device,
                     const char *name);
   void ClearBuffer() noexcept;

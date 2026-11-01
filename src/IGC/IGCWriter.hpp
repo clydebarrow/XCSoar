@@ -76,6 +76,11 @@ public:
   void LoggerNote(const char *text);
 
   /**
+   * Write an L record of XCSoar's own, "LXCS" followed by #text.
+   */
+  void LogComment(const char *text);
+
+  /**
    * Note that another device supplies the GPS fix from now on.  The
    * IGC specification allows HFGPS only once, in the header, but an L
    * record anywhere after it (A3, A4.5).

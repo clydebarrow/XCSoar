@@ -59,5 +59,12 @@ public:
   void GUIStopLogger(const NMEAInfo &gps_info,
                      bool noAsk = false);
   void LoggerNote(const char *text);
+
+  /**
+   * Write an L record of XCSoar's own ("LXCS" and #text) while the
+   * logger runs.
+   */
+  void LogComment(const char *text);
+
   void ClearBuffer() noexcept;
 };

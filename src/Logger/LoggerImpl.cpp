@@ -245,6 +245,13 @@ LoggerImpl::LoggerNote(const char *text)
 }
 
 void
+LoggerImpl::LogComment(const char *text)
+{
+  if (writer != nullptr)
+    writer->LogComment(text);
+}
+
+void
 LoggerImpl::LogGPSSource(const NMEAInfo &gps_info, char device,
                          const char *name)
 {

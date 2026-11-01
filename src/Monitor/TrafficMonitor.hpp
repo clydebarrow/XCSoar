@@ -85,6 +85,7 @@ private:
   bool IsMuted() const noexcept;
 
   void CloseAlert() noexcept;
+  void DismissAlertQuietly() noexcept;
 };
 
 /**

@@ -154,6 +154,12 @@ IGCWriter::LoggerNote(const char *text)
 }
 
 void
+IGCWriter::LogComment(const char *text)
+{
+  WriteLine("LXCS", text);
+}
+
+void
 IGCWriter::LogGPSSource(const BrokenTime &time, char device,
                         const char *name)
 {

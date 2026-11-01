@@ -182,6 +182,13 @@ Logger::LoggerNote(const char *text)
 }
 
 void
+Logger::LogComment(const char *text)
+{
+  const std::lock_guard protect{lock};
+  logger.LogComment(text);
+}
+
+void
 Logger::ClearBuffer() noexcept
 {
   const std::lock_guard protect{lock};
