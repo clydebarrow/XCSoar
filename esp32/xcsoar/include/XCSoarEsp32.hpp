@@ -302,6 +302,19 @@ struct Config {
                uint32_t argb, void *ctx) noexcept;
 
   /**
+   * Blend the block of #src at (#src_x, #src_y) over #rect of #dest:
+   * dest + (src - dest) * alpha / 256; with #white_transparent, white
+   * source pixels leave #dest unchanged.  Both buffers are in the
+   * format BytesPerPixel() describes.  Called like #fill, for large
+   * blocks only; return false to let XCSoar blend it.  nullptr if the
+   * host has no such hardware.
+   */
+  bool (*blend)(void *dest, unsigned dest_pitch, unsigned dest_height,
+                Rect rect, const void *src, unsigned src_pitch,
+                unsigned src_height, unsigned src_x, unsigned src_y,
+                unsigned alpha, bool white_transparent, void *ctx) noexcept;
+
+  /**
    * Bluetooth LE devices; nullptr if the host has none.  Must stay
    * valid while XCSoar runs.
    */

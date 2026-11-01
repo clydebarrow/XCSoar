@@ -6,7 +6,7 @@
 #include "Device/Port/HostPort.hpp"
 #include "Monitor/HostTrafficAlarm.hpp"
 #include "Audio/HostVolume.hpp"
-#include "ui/canvas/memory/HostFill.hpp"
+#include "ui/canvas/memory/HostDraw.hpp"
 #include "ui/canvas/VirtualCanvas.hpp"
 #include "ui/display/Display.hpp"
 #include "ui/event/Globals.hpp"
@@ -153,6 +153,25 @@ HostFill(void *buffer, unsigned pitch, unsigned height, const PixelRect &rect,
                       {unsigned(rect.left), unsigned(rect.top),
                        unsigned(rect.GetWidth()), unsigned(rect.GetHeight())},
                       argb, config->ctx);
+}
+
+bool
+HostBlend(void *dest, unsigned dest_pitch, unsigned dest_height,
+          const PixelRect &rect,
+          const void *src, unsigned src_pitch, unsigned src_height,
+          PixelPoint src_position, uint8_t alpha,
+          bool white_transparent) noexcept
+{
+  const auto *config = XCSoarEsp32::host_config;
+  if (config == nullptr || config->blend == nullptr)
+    return false;
+
+  return config->blend(dest, dest_pitch, dest_height,
+                       {unsigned(rect.left), unsigned(rect.top),
+                        unsigned(rect.GetWidth()), unsigned(rect.GetHeight())},
+                       src, src_pitch, src_height,
+                       unsigned(src_position.x), unsigned(src_position.y),
+                       alpha, white_transparent, config->ctx);
 }
 
 void

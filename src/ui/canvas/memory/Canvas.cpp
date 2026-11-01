@@ -22,7 +22,7 @@
 #include <string.h>
 
 #ifdef ESP_PLATFORM
-#include "HostFill.hpp"
+#include "HostDraw.hpp"
 #endif
 
 class SDLRasterCanvas : public RasterCanvas<ActivePixelTraits> {
@@ -688,12 +688,49 @@ Canvas::DrawRoundRectangle(PixelRect r, PixelSize ellipse_size) noexcept
   ::RoundRect(*this, r, radius);
 }
 
+#ifdef ESP_PLATFORM
+
+/**
+ * Offer a 1:1 blend to the host's hardware; see HostBlend().
+ */
+static bool
+HostBlend(WritableImageBuffer<ActivePixelTraits> dest,
+          PixelPoint dest_position, PixelSize size,
+          ConstImageBuffer<ActivePixelTraits> src, PixelPoint src_position,
+          uint8_t alpha, bool white_transparent) noexcept
+{
+  const PixelRect d{dest_position, size};
+  PixelRect c = d.Intersection(PixelRect{dest.size});
+  if (c.IsEmpty() || c.GetWidth() * c.GetHeight() < HOST_FILL_MIN_PIXELS)
+    return false;
+
+  const PixelPoint s = src_position + (c.GetTopLeft() - d.GetTopLeft());
+  if (s.x < 0 || s.y < 0 ||
+      unsigned(s.x) + c.GetWidth() > src.size.width ||
+      unsigned(s.y) + c.GetHeight() > src.size.height)
+    return false;
+
+  return HostBlend(dest.data, dest.pitch, dest.size.height, c,
+                   src.data, src.pitch, src.size.height, s,
+                   alpha, white_transparent);
+}
+
+#endif
+
 void
 Canvas::AlphaBlend(PixelPoint dest_position, PixelSize dest_size,
                    ConstImageBuffer src,
                    PixelPoint src_position, PixelSize src_size,
                    uint8_t alpha)
 {
+#ifdef ESP_PLATFORM
+  /* the ESP32-P4's PPA blends large areas */
+  if (dest_size == src_size &&
+      HostBlend(buffer, dest_position, dest_size, src, src_position,
+                alpha, false))
+    return;
+#endif
+
   SDLRasterCanvas canvas(buffer);
 
   AlphaPixelOperations<ActivePixelTraits> operations(alpha);
@@ -728,6 +765,13 @@ Canvas::AlphaBlendNotWhite(PixelPoint dest_position, PixelSize dest_size,
                            PixelPoint src_position, PixelSize src_size,
                            uint8_t alpha)
 {
+#ifdef ESP_PLATFORM
+  if (dest_size == src_size &&
+      HostBlend(buffer, dest_position, dest_size, src, src_position,
+                alpha, true))
+    return;
+#endif
+
   SDLRasterCanvas canvas(buffer);
 
   NotWhiteCondition<ActivePixelTraits> c;
