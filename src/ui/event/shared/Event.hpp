@@ -34,7 +34,7 @@ struct Event {
      */
     MOUSE_WHEEL,
 
-#if defined(ANDROID) || defined(USE_WAYLAND)
+#if defined(ANDROID) || defined(USE_WAYLAND) || defined(ESP_PLATFORM)
     MOUSE_CANCEL,
     POINTER_DOWN,
     POINTER_UP,
@@ -103,7 +103,7 @@ struct Event {
 
   PixelPoint point;
 
-#if defined(ANDROID) || defined(USE_WAYLAND)
+#if defined(ANDROID) || defined(USE_WAYLAND) || defined(ESP_PLATFORM)
   /**
    * Second finger position for #POINTER_DOWN / #POINTER_MOVE.
    */
@@ -126,7 +126,7 @@ struct Event {
     :type(CALLBACK), ptr(_ptr), callback(_callback) {}
   Event(Type _type, PixelPoint _point)
     :type(_type), point(_point) {}
-#if defined(ANDROID) || defined(USE_WAYLAND)
+#if defined(ANDROID) || defined(USE_WAYLAND) || defined(ESP_PLATFORM)
   Event(Type _type, PixelPoint _point, PixelPoint _point2) noexcept
     :type(_type), point(_point), point2(_point2) {}
 #endif

@@ -20,6 +20,7 @@
 #include "Form/Button.hpp"
 #include "util/StringAPI.hxx"
 #include "ui/event/Idle.hpp"
+#include "ui/window/custom/DoubleClick.hpp"
 #ifdef HAVE_EDL
 #include "UIState.hpp"
 #endif
@@ -62,10 +63,14 @@ GlueMapWindow::OnDestroy() noexcept
   MapWindow::OnDestroy();
 }
 
+/* a finger resting this long without moving opens the menu */
+static constexpr auto LONG_PRESS = std::chrono::milliseconds(600);
+
 bool
 GlueMapWindow::OnMouseDouble(PixelPoint p) noexcept
 {
   map_item_timer.Cancel();
+  long_press_timer.Cancel();
 
   mouse_down_clock.Update();
 
@@ -90,6 +95,9 @@ GlueMapWindow::OnMouseMove(PixelPoint p, unsigned keys) noexcept
       ((unsigned)ManhattanDistance(drag_start, p) > threshold ||
        mouse_down_clock.Elapsed() > std::chrono::milliseconds(200)))
     arm_mapitem_list = false;
+
+  if ((unsigned)ManhattanDistance(drag_start, p) > threshold)
+    long_press_timer.Cancel();
 
   switch (drag_mode) {
   case DRAG_NONE:
@@ -265,6 +273,10 @@ GlueMapWindow::OnMouseDown(PixelPoint p) noexcept
     drag_mode = DRAG_GESTURE;
   }
 
+  if (HasTouchScreen() &&
+      (drag_mode == DRAG_GESTURE || drag_mode == DRAG_PAN))
+    long_press_timer.Schedule(LONG_PRESS);
+
   if (drag_mode != DRAG_NONE)
     SetCapture();
 
@@ -274,6 +286,8 @@ GlueMapWindow::OnMouseDown(PixelPoint p) noexcept
 bool
 GlueMapWindow::OnMouseUp(PixelPoint p) noexcept
 {
+  long_press_timer.Cancel();
+
   if (drag_mode != DRAG_NONE)
     ReleaseCapture();
 
@@ -390,7 +404,9 @@ GlueMapWindow::OnMouseUp(PixelPoint p) noexcept
     if (HandleCompassTap(drag_start))
       return true;
 
-    map_item_timer.Schedule(std::chrono::milliseconds(200));
+    /* wait as long as a double tap may take, so that a slow second
+       tap still opens the menu instead of the map items */
+    map_item_timer.Schedule(DoubleClick::INTERVAL);
     return true;
   }
 
@@ -798,6 +814,25 @@ GlueMapWindow::OnPaintBuffer(Canvas &canvas) noexcept
 #ifdef ENABLE_OPENGL
   LeaveDrawThread();
 #endif
+}
+
+void
+GlueMapWindow::OnLongPress() noexcept
+{
+  /* drop the gesture or drag the finger started, and ignore its
+     release */
+  if (drag_mode == DRAG_GESTURE) {
+    gestures.Finish();
+    PaintWindow::Invalidate();
+  }
+  if (drag_mode != DRAG_NONE)
+    ReleaseCapture();
+  drag_mode = DRAG_NONE;
+  arm_mapitem_list = false;
+  map_item_timer.Cancel();
+  ignore_single_click = true;
+
+  InputEvents::ShowMenu();
 }
 
 void

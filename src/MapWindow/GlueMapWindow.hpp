@@ -252,6 +252,12 @@ private:
   UI::Timer map_item_timer{[this]{ OnMapItemTimer(); }};
 
   /**
+   * Opens the menu when a finger rests on the map: easier than a
+   * double tap, whose timing matters.
+   */
+  UI::Timer long_press_timer{[this]{ OnLongPress(); }};
+
+  /**
    * Repaints the page indicator while it fades out, and when it
    * disappears.
    */
@@ -594,6 +600,7 @@ protected:
 
 private:
   void OnMapItemTimer() noexcept;
+  void OnLongPress() noexcept;
   void OnPageIndicatorTimer() noexcept;
 
 #ifdef ENABLE_OPENGL

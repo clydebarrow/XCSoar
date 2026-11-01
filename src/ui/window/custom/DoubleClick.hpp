@@ -12,15 +12,28 @@
  * click" event.
  */
 class DoubleClick {
+public:
   /**
    * The maximum time span between two clicks for a double click [ms].
+   * Longer on e-readers and the ESP32, whose touch screens and screen
+   * updates are slower.
    */
+#ifdef ESP_PLATFORM
+  static constexpr auto INTERVAL = std::chrono::milliseconds(750);
+#else
   static constexpr auto INTERVAL = std::chrono::milliseconds(IsKobo() ? 750 : 500);
+#endif
 
+private:
   /**
-   * The maximum distance between two clicks.
+   * The maximum distance between two clicks.  The ESP32 screens have
+   * a high pixel density: 100 pixels are about 8.5 mm on the Tab5.
    */
+#ifdef ESP_PLATFORM
+  static constexpr unsigned MAX_DISTANCE_PX = 100;
+#else
   static constexpr unsigned MAX_DISTANCE_PX = IsKobo()? 70 : 50;
+#endif
 
   PeriodClock clock;
 

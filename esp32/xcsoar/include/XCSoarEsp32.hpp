@@ -294,6 +294,13 @@ struct Config {
   const BleHost *ble;
 
   /**
+   * The host passes touches with InjectTouches() or InjectPointer():
+   * XCSoar then uses its touch screen behavior (larger controls,
+   * swiping lists, a long press on the map for the menu).
+   */
+  bool touch_screen;
+
+  /**
    * RunDemo() only: how often the test scene moves on.
    */
   unsigned frame_interval_ms;
@@ -340,6 +347,22 @@ enum class PointerAction : uint8_t {
  */
 void
 InjectPointer(PointerAction action, int x, int y) noexcept;
+
+/** A finger on the touch screen, in XCSoar's screen coordinates. */
+struct TouchPosition {
+  int x, y;
+};
+
+/**
+ * Pass the fingers now on the touch screen to XCSoar: call it each
+ * time they move, are added or are lifted, with none when the last is
+ * lifted.  The first finger works the mouse; with two, XCSoar gets
+ * two-finger gestures (pinch to zoom, two-finger pan) instead, and
+ * the touch then ends without a click.  Fingers after the second are
+ * ignored.  Call it from one task only.
+ */
+void
+InjectTouches(std::span<const TouchPosition> fingers) noexcept;
 
 /**
  * Pass data to the device reading the stream #name (see

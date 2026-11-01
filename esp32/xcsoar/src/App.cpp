@@ -58,15 +58,15 @@ Run(const Config &config) noexcept
   std::string datapath = fmt::format("-datapath={}", config.data_path);
   std::string dpi = fmt::format("-dpi={}", config.dpi);
   char program[] = "xcsoar";
-  char *argv[] = {
-    program,
-    size.data(),
-    datapath.data(),
-    config.dpi > 0 ? dpi.data() : nullptr,
-    nullptr,
-  };
+  char touch[] = "-touchscreen";
+  char *argv[6] = {program, size.data(), datapath.data()};
+  int argc = 3;
+  if (config.dpi > 0)
+    argv[argc++] = dpi.data();
+  if (config.touch_screen)
+    argv[argc++] = touch;
 
-  return XCSoarMain(config.dpi > 0 ? 4 : 3, argv) == 0;
+  return XCSoarMain(argc, argv) == 0;
 }
 
 } // namespace XCSoarEsp32

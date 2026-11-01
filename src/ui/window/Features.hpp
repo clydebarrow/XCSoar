@@ -11,7 +11,7 @@
 #include "sdl/Features.hpp"
 #endif
 
-#ifdef USE_WAYLAND
+#if defined(USE_WAYLAND) || defined(ESP_PLATFORM)
 #define HAVE_MULTI_TOUCH
 #endif
 

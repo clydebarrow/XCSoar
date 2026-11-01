@@ -98,7 +98,7 @@ TopWindow::OnEvent(const Event &event)
     ResetUserIdle();
     return OnMouseWheel(event.point, (int)event.param);
 
-#ifdef USE_WAYLAND
+#if defined(USE_WAYLAND) || defined(ESP_PLATFORM)
   case Event::MOUSE_CANCEL:
     ResetUserIdle();
     OnCancelMode();

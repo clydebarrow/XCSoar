@@ -11,6 +11,7 @@
 #include "ui/event/Globals.hpp"
 #include "ui/event/Queue.hpp"
 
+#include <algorithm>
 #include <iterator>
 
 namespace XCSoarEsp32 {
@@ -73,6 +74,51 @@ InjectPointer(PointerAction action, int x, int y) noexcept
   };
 
   queue->Inject(UI::Event(types[unsigned(action)], PixelPoint(x, y)));
+}
+
+void
+InjectTouches(std::span<const TouchPosition> fingers) noexcept
+{
+  UI::EventQueue *queue = UI::event_queue;
+  if (queue == nullptr)
+    return;
+
+  /* the fingers of the last call, and whether this touch has had two */
+  static unsigned last_count = 0;
+  static bool multi = false;
+  static PixelPoint last_point{};
+
+  const unsigned count = std::min<std::size_t>(fingers.size(), 2);
+  const PixelPoint p0 = count > 0
+    ? PixelPoint(fingers[0].x, fingers[0].y)
+    : last_point;
+
+  if (last_count == 0 && count > 0)
+    queue->Inject(UI::Event(UI::Event::MOUSE_DOWN, p0));
+
+  if (count == 2) {
+    multi = true;
+    const PixelPoint p1(fingers[1].x, fingers[1].y);
+    queue->Inject(UI::Event(last_count < 2
+                            ? UI::Event::POINTER_DOWN
+                            : UI::Event::POINTER_MOVE,
+                            p0, p1));
+  } else {
+    if (last_count == 2)
+      queue->Inject(UI::Event(UI::Event::POINTER_UP));
+    if (count == 1 && last_count == 1)
+      queue->Inject(UI::Event(UI::Event::MOUSE_MOTION, p0));
+    if (count == 0 && last_count > 0) {
+      /* a two-finger gesture is not a click */
+      queue->Inject(UI::Event(multi
+                              ? UI::Event::MOUSE_CANCEL
+                              : UI::Event::MOUSE_UP, p0));
+      multi = false;
+    }
+  }
+
+  last_point = p0;
+  last_count = count;
 }
 
 void
