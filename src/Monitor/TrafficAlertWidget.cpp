@@ -37,7 +37,7 @@ static constexpr Color URGENT_BACKGROUND = Color(0xc8, 0x00, 0x00);
 class TrafficAlertWindow final : public ContainerWindow {
   TrafficMonitor &monitor;
 
-  Font large_font, text_font;
+  Font large_font, text_font, small_font;
 
   Button dismiss_button, mute_button;
 
@@ -51,10 +51,14 @@ public:
 private:
   void Layout(PixelSize size) noexcept;
 
+  void PaintHeight(Canvas &canvas, const PixelRect &rc,
+                   const FlarmStatus &status, const FlarmTraffic *traffic,
+                   Color color) noexcept;
   void PaintDirection(Canvas &canvas, const PixelRect &rc,
                       const FlarmStatus &status, Color color) noexcept;
   void PaintText(Canvas &canvas, const PixelRect &rc,
-                 const FlarmStatus &status, Color color) noexcept;
+                 const FlarmStatus &status, const FlarmTraffic *traffic,
+                 Color color) noexcept;
 
 protected:
   void OnResize(PixelSize new_size) noexcept override;
@@ -73,6 +77,7 @@ TrafficAlertWindow::TrafficAlertWindow(ContainerWindow &parent,
 
   large_font.Load(FontDescription(Layout::FontScale(24), true));
   text_font.Load(FontDescription(Layout::FontScale(16), true));
+  small_font.Load(FontDescription(Layout::FontScale(12), true));
 
   const ButtonLook &look = UIGlobals::GetDialogLook().button;
   WindowStyle button_style;
@@ -124,6 +129,75 @@ ClockPosition(int bearing) noexcept
 {
   const int hour = ((bearing % 360 + 360 + 15) % 360) / 30;
   return hour == 0 ? 12 : unsigned(hour);
+}
+
+/**
+ * Draw #text centered horizontally on #x, with #font if it fits in
+ * #width, otherwise with #fallback.
+ */
+static void
+DrawCentered(Canvas &canvas, int x, int y, unsigned width, const char *text,
+             const Font &font, const Font &fallback) noexcept
+{
+  canvas.Select(font);
+  PixelSize size = canvas.CalcTextSize(text);
+  if (size.width > width) {
+    canvas.Select(fallback);
+    size = canvas.CalcTextSize(text);
+  }
+  canvas.DrawText({x - int(size.width) / 2, y}, text);
+}
+
+void
+TrafficAlertWindow::PaintHeight(Canvas &canvas, const PixelRect &rc,
+                                const FlarmStatus &status,
+                                const FlarmTraffic *traffic,
+                                Color color) noexcept
+{
+  if (!status.has_vertical)
+    return;
+
+  const double height = status.relative_vertical;
+  const bool level = std::fabs(height) < LEVEL_HEIGHT;
+
+  /* a triangle pointing up for traffic above, down for below, a bar
+     for level */
+  const int x = rc.left + int(rc.GetWidth()) / 2;
+  const int half = int(rc.GetWidth()) * 35 / 100;
+  const int symbol_height = half * 2;
+  const int top = rc.top + int(Layout::GetTextPadding()) * 4;
+
+  const Brush brush(color);
+  canvas.SelectNullPen();
+  canvas.Select(brush);
+  if (level) {
+    const int bar = std::max(symbol_height / 5, int(Layout::Scale(6)));
+    const int y = top + symbol_height / 2 - bar / 2;
+    canvas.DrawFilledRectangle({x - half, y, x + half, y + bar}, brush);
+  } else {
+    const int tip = height > 0 ? top : top + symbol_height;
+    const int base = height > 0 ? top + symbol_height : top;
+    const BulkPixelPoint points[] = {
+      {x, tip}, {x + half, base}, {x - half, base},
+    };
+    canvas.DrawPolygon(points, std::size(points));
+  }
+
+  int y = top + symbol_height + int(Layout::GetTextPadding()) * 2;
+  StaticString<32> text;
+  if (level)
+    text = _("Level");
+  else
+    text = FormatUserAltitude(std::fabs(height)).c_str();
+  DrawCentered(canvas, x, y, rc.GetWidth(), text.c_str(), large_font,
+               text_font);
+  y += int(large_font.GetHeight());
+
+  if (traffic != nullptr && traffic->climb_rate_received &&
+      std::fabs(traffic->climb_rate) >= MIN_CLIMB_RATE)
+    DrawCentered(canvas, x, y, rc.GetWidth(),
+                 traffic->climb_rate > 0 ? _("climbing") : _("descending"),
+                 text_font, small_font);
 }
 
 void
@@ -186,9 +260,39 @@ TrafficAlertWindow::PaintDirection(Canvas &canvas, const PixelRect &rc,
                   clock.c_str());
 }
 
+/**
+ * A plain name for the kind of aircraft, or nullptr if not known.
+ */
+static const char *
+GetTypeName(FlarmTraffic::AircraftType type) noexcept
+{
+  using Type = FlarmTraffic::AircraftType;
+  switch (type) {
+  case Type::GLIDER: return _("Glider");
+  case Type::TOW_PLANE: return _("Tow plane");
+  case Type::HELICOPTER: return _("Helicopter");
+  case Type::PARACHUTE: return _("Parachute");
+  case Type::DROP_PLANE: return _("Drop plane");
+  case Type::HANG_GLIDER: return _("Hang glider");
+  case Type::PARA_GLIDER: return _("Paraglider");
+  case Type::POWERED_AIRCRAFT: return _("Powered aircraft");
+  case Type::JET_AIRCRAFT: return _("Jet");
+  case Type::BALLOON: return _("Balloon");
+  case Type::AIRSHIP: return _("Airship");
+  case Type::UAV: return _("Drone");
+  case Type::STATIC_OBJECT: return _("Obstacle");
+  case Type::UNKNOWN:
+  case Type::FLYING_SAUCER:
+    break;
+  }
+
+  return nullptr;
+}
+
 void
 TrafficAlertWindow::PaintText(Canvas &canvas, const PixelRect &rc,
                               const FlarmStatus &status,
+                              const FlarmTraffic *traffic,
                               Color color) noexcept
 {
   canvas.SetTextColor(color);
@@ -196,37 +300,18 @@ TrafficAlertWindow::PaintText(Canvas &canvas, const PixelRect &rc,
   const int padding = int(Layout::GetTextPadding()) * 2;
   PixelPoint p{rc.left + padding, rc.top + padding};
 
+  const char *headline = status.alarm_level == FlarmTraffic::AlarmType::URGENT
+    ? _("Traffic urgent")
+    : _("Traffic");
   canvas.Select(large_font);
-  canvas.DrawText(p, status.alarm_level == FlarmTraffic::AlarmType::URGENT
-                  ? _("Traffic urgent")
-                  : _("Traffic"));
+  if (canvas.CalcTextWidth(headline) + 2 * unsigned(padding) > rc.GetWidth())
+    canvas.Select(text_font);
+  canvas.DrawText(p, headline);
   p.y += int(large_font.GetHeight()) + padding;
-
-  const auto &basic = CommonInterface::Basic();
-  const FlarmTraffic *traffic =
-    basic.flarm.traffic.FindTraffic(status.target_id);
-
-  StaticString<64> line;
-
-  if (status.has_vertical) {
-    const double height = status.relative_vertical;
-    if (std::fabs(height) < LEVEL_HEIGHT)
-      line = _("Level");
-    else
-      line.Format("%s %s", FormatUserAltitude(std::fabs(height)).c_str(),
-                  height > 0 ? _("above") : _("below"));
-
-    if (traffic != nullptr && traffic->climb_rate_received &&
-        std::fabs(traffic->climb_rate) >= MIN_CLIMB_RATE)
-      line.AppendFormat(", %s", traffic->climb_rate > 0
-                        ? _("climbing") : _("descending"));
-
-    canvas.DrawText(p, line.c_str());
-    p.y += int(large_font.GetHeight()) + padding;
-  }
 
   canvas.Select(text_font);
 
+  StaticString<64> line;
   line = FormatUserDistanceSmart(status.relative_distance).c_str();
   if (status.has_proximity_time)
     line.AppendFormat(", %s %u s", _("close in"),
@@ -234,11 +319,23 @@ TrafficAlertWindow::PaintText(Canvas &canvas, const PixelRect &rc,
   canvas.DrawText(p, line.c_str());
   p.y += int(text_font.GetHeight()) + padding;
 
-  const char *name = FlarmDetails::LookupCallsign(status.target_id);
+  const ResolvedInfo info = FlarmDetails::ResolveInfo(status.target_id);
+
+  const char *name = !info.callsign.empty() ? info.callsign.c_str() : nullptr;
   if (name == nullptr && traffic != nullptr && traffic->HasName())
     name = traffic->name.c_str();
-  if (name != nullptr)
+  if (name != nullptr) {
     canvas.DrawText(p, name);
+    p.y += int(text_font.GetHeight()) + padding;
+  }
+
+  /* the model from the FLARM databases, or else the kind the aircraft
+     reports */
+  const char *type = !info.plane_type.empty() ? info.plane_type.c_str() : nullptr;
+  if (type == nullptr && traffic != nullptr)
+    type = GetTypeName(traffic->type);
+  if (type != nullptr)
+    canvas.DrawText(p, type);
 }
 
 void
@@ -266,9 +363,19 @@ TrafficAlertWindow::OnPaint(Canvas &canvas) noexcept
     canvas.Clear(urgent ? URGENT_BACKGROUND : IMPORTANT_BACKGROUND);
     canvas.SetTextColor(color);
 
-    const auto [left, right] = content.VerticalSplit();
-    PaintDirection(canvas, left, status, color);
-    PaintText(canvas, right, status, color);
+    const FlarmTraffic *traffic =
+      CommonInterface::Basic().flarm.traffic.FindTraffic(status.target_id);
+
+    /* the graphics beside the text in landscape, above it in portrait */
+    const bool portrait = content.GetHeight() > content.GetWidth();
+    const auto [graphics, text] = portrait
+      ? content.HorizontalSplit(content.top + int(content.GetHeight()) * 3 / 5)
+      : content.VerticalSplit();
+    const auto [height, direction] =
+      graphics.VerticalSplit(graphics.left + int(graphics.GetWidth()) * 3 / 10);
+    PaintHeight(canvas, height, status, traffic, color);
+    PaintDirection(canvas, direction, status, color);
+    PaintText(canvas, text, status, traffic, color);
   }
 
   ContainerWindow::OnPaint(canvas);

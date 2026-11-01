@@ -323,6 +323,43 @@ FlarmTrafficWindow::PaintNoPositionTarget(Canvas &canvas,
  * Paints the traffic symbols on the given canvas
  * @param canvas The canvas to paint on
  */
+/* A target beyond the radar's range is shown on its edge only if it
+   would reach the ownship within this time: twice the earliest
+   collision alarm (ThreatComputer::LOW_TIME) */
+static constexpr double EDGE_TARGET_TIME = 36;
+
+/**
+ * Is the target closing, at a speed that brings it to the ownship
+ * within #EDGE_TARGET_TIME?  Without the target's track and speed it
+ * counts as standing still.
+ */
+static bool
+IsApproaching(const FlarmTraffic &traffic) noexcept
+{
+  const auto &basic = CommonInterface::Basic();
+  double own_north = 0, own_east = 0;
+  if (basic.track_available && basic.ground_speed_available) {
+    own_north = basic.ground_speed * basic.track.cos();
+    own_east = basic.ground_speed * basic.track.sin();
+  }
+
+  double north = -own_north, east = -own_east;
+  if (traffic.track_received && traffic.speed_received) {
+    const Angle track = traffic.track;
+    north += double(traffic.speed) * track.cos();
+    east += double(traffic.speed) * track.sin();
+  }
+
+  /* the rate at which the distance shrinks */
+  const double range = double(traffic.distance);
+  if (range <= 0)
+    return true;
+
+  const double closing = -(traffic.relative_north * north +
+                           traffic.relative_east * east) / range;
+  return closing > 0 && range <= closing * EDGE_TARGET_TIME;
+}
+
 void
 FlarmTrafficWindow::PaintRadarTarget(Canvas &canvas,
                                      const FlarmTraffic &traffic,
@@ -340,8 +377,11 @@ FlarmTrafficWindow::PaintRadarTarget(Canvas &canvas,
   // Calculate the distance in pixels
   double scale = RangeScale(traffic.distance);
 
-  // Don't display distracting, far away targets in WarningMode
-  if (WarningMode() && !traffic.HasAlarm() && scale == radar_renderer.GetRadius())
+  /* Don't display distracting, far away targets: beyond the range they
+     would all sit on the edge.  In WarningMode only alarms are shown
+     there, otherwise targets that will soon be close as well. */
+  if (scale == radar_renderer.GetRadius() && !traffic.HasAlarm() &&
+      (WarningMode() || !IsApproaching(traffic)))
     return;
 
   // x and y are not between 0 and 1 (distance will be handled via scale)

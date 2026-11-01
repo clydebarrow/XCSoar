@@ -27,6 +27,13 @@ struct MoreData;
  * FLARM: the traffic gauge and map colors, and the spoken alert.
  */
 class ThreatComputer {
+  /**
+   * Close proximity, horizontally, in meters.  Much smaller than the
+   * 0.5 NM of the SkyEcho prediction, which was made for powered
+   * aircraft: gliders often fly within a kilometer of each other.
+   */
+  static constexpr float ALARM_DISTANCE = 150;
+
   /** FLARM alarm level by time to close proximity, in seconds */
   static constexpr float URGENT_TIME = 8;
   static constexpr float IMPORTANT_TIME = 12;
@@ -61,6 +68,7 @@ class ThreatComputer {
 
 public:
   ThreatComputer() noexcept {
+    settings.alarm_distance = ALARM_DISTANCE;
     settings.alarm_time = LOW_TIME;
   }
 

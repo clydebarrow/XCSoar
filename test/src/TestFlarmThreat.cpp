@@ -195,15 +195,15 @@ TestComputer() noexcept
   MoreData basic;
   FlarmData flarm;
 
-  /* head on, closing at 100 m/s, 926 m + 1000 m away: close
+  /* head on, closing at 100 m/s, 150 m + 1000 m away: close
      proximity in 10 s, an important alarm */
   SetOwnship(basic, At(10));
   flarm.Clear();
-  AddTarget(flarm, basic.clock, 0x7C0001, 1926, 0, 50);
+  AddTarget(flarm, basic.clock, 0x7C0001, 1150, 0, 50);
   /* the same distance, but 2000 ft above: no alarm */
-  AddTarget(flarm, basic.clock, 0x7C0002, 1926, 2000 * FT, 50);
+  AddTarget(flarm, basic.clock, 0x7C0002, 1150, 2000 * FT, 50);
   /* online traffic is too old to warn about */
-  AddTarget(flarm, basic.clock, 0x7C0003, 1926, 0, 50,
+  AddTarget(flarm, basic.clock, 0x7C0003, 1150, 0, 50,
             FlarmTraffic::SourceType::SKYLINES);
   computer.Process(flarm, basic);
 
@@ -217,7 +217,7 @@ TestComputer() noexcept
   ok1(flarm.status.alarm_level == FlarmTraffic::AlarmType::IMPORTANT);
   ok1(flarm.status.alarm_type == 2);
   ok1(flarm.status.has_bearing && flarm.status.relative_bearing == 0);
-  ok1(flarm.status.relative_distance == 1926);
+  ok1(flarm.status.relative_distance == 1150);
   ok1(flarm.status.target_id == FlarmId::FromValue(0x7C0001));
   ok1(flarm.status.has_proximity_time);
   ok1(Near(flarm.status.proximity_time, 10, 0.1f));
@@ -225,13 +225,13 @@ TestComputer() noexcept
   /* the merged data is rebuilt before each call: the alarm is applied
      again from the latest assessment */
   flarm.Clear();
-  AddTarget(flarm, basic.clock, 0x7C0001, 1926, 0, 50);
+  AddTarget(flarm, basic.clock, 0x7C0001, 1150, 0, 50);
   computer.Process(flarm, basic);
   ok1(flarm.status.alarm_level == FlarmTraffic::AlarmType::IMPORTANT);
 
   /* a FLARM's own higher alarm is kept */
   flarm.Clear();
-  AddTarget(flarm, basic.clock, 0x7C0001, 1926, 0, 50);
+  AddTarget(flarm, basic.clock, 0x7C0001, 1150, 0, 50);
   flarm.status.available.Update(basic.clock);
   flarm.status.alarm_level = FlarmTraffic::AlarmType::URGENT;
   flarm.status.target_id = FlarmId::FromValue(0x123456);
@@ -241,7 +241,7 @@ TestComputer() noexcept
   /* a second later, 5 s from close proximity: urgent */
   SetOwnship(basic, At(11));
   flarm.Clear();
-  AddTarget(flarm, basic.clock, 0x7C0001, 1426, 0, 50);
+  AddTarget(flarm, basic.clock, 0x7C0001, 650, 0, 50);
   computer.Process(flarm, basic);
   ok1(flarm.status.alarm_level == FlarmTraffic::AlarmType::URGENT);
 
