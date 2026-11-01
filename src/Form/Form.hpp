@@ -83,10 +83,9 @@ protected:
 
   void OnPaint(Canvas &canvas) noexcept override;
 
-  /* the border is drawn after the controls */
-  bool PaintsOverChildren() const noexcept override {
-    return true;
-  }
+  /* the border and the caption are drawn after the controls, but
+     outside the client area, so the controls can still be repainted
+     on their own (PaintsOverChildren() stays false) */
 
   std::string caption;
 
