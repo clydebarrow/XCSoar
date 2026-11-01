@@ -74,6 +74,8 @@
 #include "CalculationThread.hpp"
 #include "Replay/Replay.hpp"
 #include "DataFilePath.hpp"
+#include "ClubConfig.hpp"
+#include "Gauge/LogoView.hpp"
 #include "LocalPath.hpp"
 #include "system/FileUtil.hpp"
 #include "io/FileCache.hpp"
@@ -176,6 +178,35 @@ bool
 WasStartupCancelledByUser() noexcept
 {
   return startup_cancelled_by_user;
+}
+
+/**
+ * Show the club and the glider from "club.json" on the start and
+ * progress screens.
+ */
+static void
+ApplyClubBranding() noexcept
+{
+  LoadClubConfig();
+  const auto &club = GetClubConfig();
+  if (!club.IsDefined())
+    return;
+
+  static LogoView::Branding branding;
+  branding.organisation = club.organisation;
+  branding.glider = club.glider_type;
+  if (!club.glider_registration.empty()) {
+    if (!branding.glider.empty())
+      branding.glider += "   ";
+    branding.glider += club.glider_registration;
+  }
+
+  if (const Path logo{club.logo.c_str()}; club.logo.empty() || logo.IsAbsolute())
+    branding.logo_path = club.logo;
+  else
+    branding.logo_path = LocalPath(logo).c_str();
+
+  LogoView::SetBranding(&branding);
 }
 
 static bool
@@ -508,6 +539,7 @@ Startup(UI::Display &display)
 
   CommonInterface::SetUISettings().SetDefaults();
   main_window->Initialise();
+  ApplyClubBranding();
 
 #ifdef ANDROID
   /* surfaceChanged may have reported insets before the event queue

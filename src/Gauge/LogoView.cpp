@@ -8,12 +8,28 @@
 #include "util/Compiler.h"
 #include "Resources.hpp"
 #include "Version.hpp"
+#include "system/FileUtil.hpp"
+#include "system/Path.hpp"
 
 #ifdef ENABLE_OPENGL
 #include "ui/canvas/opengl/Scope.hpp"
 #endif
 
 #include <algorithm>
+
+static const LogoView::Branding *branding = nullptr;
+
+void
+LogoView::SetBranding(const Branding *_branding) noexcept
+{
+  branding = _branding;
+}
+
+bool
+LogoView::HasBranding() noexcept
+{
+  return branding != nullptr;
+}
 
 LogoView::LogoView() noexcept try
   :logo(IDB_LOGO), big_logo(IDB_LOGO_HD), huge_logo(IDB_LOGO_UHD),
@@ -35,6 +51,17 @@ LogoView::LogoView() noexcept try
   bold_desc.SetBold(true);
   bold_font.Load(bold_desc);
 #endif
+
+  if (branding != nullptr) {
+    organisation_font.Load(FontDescription(Layout::FontScale(24), true));
+    glider_font.Load(FontDescription(Layout::FontScale(16)));
+
+    /* checking first avoids an exception, which is slow on some
+       platforms */
+    if (const Path path{branding->logo_path.c_str()};
+        !branding->logo_path.empty() && File::Exists(path))
+      club_logo.LoadFile(path);
+  }
 } catch (...) {
   /* ignore Bitmap/Font loader exceptions */
 }
@@ -80,6 +107,126 @@ EstimateLogoViewSize(LogoViewOrientation orientation,
 void
 LogoView::draw(Canvas &canvas, const PixelRect &rc,
                bool dark_mode) noexcept
+{
+  if (branding == nullptr) {
+    DrawXCSoar(canvas, rc, dark_mode, rc.GetTopLeft());
+    return;
+  }
+
+  /* the club above, a smaller XCSoar logo in the bottom third; the
+     top row stays free for the version and a Quit button */
+  PixelRect club_rc = rc, xcsoar_rc = rc;
+  club_rc.bottom = xcsoar_rc.top = rc.bottom - int(rc.GetHeight() / 3);
+  club_rc.top = std::min(club_rc.top + int(Layout::GetMaximumControlHeight()),
+                         club_rc.bottom);
+  club_rc.Grow(-int(Layout::GetTextPadding()) * 4, 0);
+
+  DrawBranding(canvas, club_rc, dark_mode);
+  if (xcsoar_rc.GetHeight() >= 32)
+    DrawXCSoar(canvas, xcsoar_rc, dark_mode, rc.GetTopLeft());
+}
+
+/**
+ * The size of #source scaled to fit #max_width and #max_height,
+ * keeping its shape.
+ */
+static PixelSize
+FitSize(PixelSize source, int max_width, int max_height) noexcept
+{
+  if (max_width <= 0 || max_height <= 0)
+    return {0, 0};
+
+  const double scale = std::min(double(max_width) / source.width,
+                                double(max_height) / source.height);
+  return {unsigned(source.width * scale), unsigned(source.height * scale)};
+}
+
+void
+LogoView::DrawBranding(Canvas &canvas, const PixelRect &rc,
+                       bool dark_mode) noexcept
+{
+  const unsigned width = rc.GetWidth(), height = rc.GetHeight();
+
+  PixelSize organisation_size{0, 0}, glider_size{0, 0};
+  if (organisation_font.IsDefined() && !branding->organisation.empty()) {
+    canvas.Select(organisation_font);
+    organisation_size = canvas.CalcTextSize(branding->organisation);
+  }
+  if (glider_font.IsDefined() && !branding->glider.empty()) {
+    canvas.Select(glider_font);
+    glider_size = canvas.CalcTextSize(branding->glider);
+  }
+
+  const int spacing = std::max(organisation_size.height,
+                               glider_size.height) / 3;
+  const unsigned text_width = std::max(organisation_size.width,
+                                       glider_size.width);
+  const unsigned text_height = organisation_size.height + spacing +
+    glider_size.height;
+
+  /* in landscape the logo is left of the text and as high as the
+     area; otherwise above it, in the height the text leaves */
+  const bool beside = width > 3 * height / 2;
+
+  PixelSize logo_size{0, 0};
+  if (club_logo.IsDefined()) {
+    if (beside)
+      logo_size = FitSize(club_logo.GetSize(),
+                          int(width) - int(text_width) - 3 * spacing,
+                          int(height) - 2 * spacing);
+    else
+      logo_size = FitSize(club_logo.GetSize(), int(width) - 2 * spacing,
+                          int(height) - int(text_height) - 3 * spacing);
+  }
+
+  PixelPoint logo_position, text_position;
+  if (beside) {
+    const unsigned total_width = logo_size.width +
+      (logo_size.width > 0 ? 2 * spacing : 0) + text_width;
+    logo_position = {rc.left + Center(width, total_width),
+                     rc.top + Center(height, logo_size.height)};
+    text_position = {logo_position.x + int(total_width - text_width),
+                     rc.top + Center(height, text_height)};
+  } else {
+    const unsigned total_height = logo_size.height +
+      (logo_size.height > 0 ? spacing : 0) + text_height;
+    logo_position = {rc.left + Center(width, logo_size.width),
+                     rc.top + Center(height, total_height)};
+    text_position = {rc.left,
+                     logo_position.y + int(total_height - text_height)};
+  }
+
+  if (logo_size.height > 0) {
+#ifdef ENABLE_OPENGL
+    const ScopeAlphaBlend alpha_blend;
+#endif
+    canvas.Stretch(logo_position, logo_size, club_logo);
+  }
+
+  canvas.SetTextColor(dark_mode ? COLOR_WHITE : COLOR_BLACK);
+  canvas.SetBackgroundTransparent();
+
+  /* centered in the text column (beside) or in the area (above) */
+  const unsigned column_width = beside ? text_width : width;
+  int y = text_position.y;
+
+  if (organisation_size.height > 0) {
+    canvas.Select(organisation_font);
+    canvas.DrawText({text_position.x + std::max(Center(column_width, organisation_size.width), 0), y},
+                    branding->organisation);
+    y += organisation_size.height + spacing;
+  }
+
+  if (glider_size.height > 0) {
+    canvas.Select(glider_font);
+    canvas.DrawText({text_position.x + std::max(Center(column_width, glider_size.width), 0), y},
+                    branding->glider);
+  }
+}
+
+void
+LogoView::DrawXCSoar(Canvas &canvas, const PixelRect &rc, bool dark_mode,
+                     PixelPoint version_position) noexcept
 {
   /* Return only if all logo and title variants are missing */
   if (!huge_logo.IsDefined() && !big_logo.IsDefined() && !logo.IsDefined() &&
@@ -238,7 +385,7 @@ LogoView::draw(Canvas &canvas, const PixelRect &rc,
 
   canvas.SetTextColor(dark_mode ? COLOR_WHITE : COLOR_BLACK);
   canvas.SetBackgroundTransparent();
-  canvas.DrawText(origin + PixelPoint{2, 2}, XCSoar_ProductToken);
+  canvas.DrawText(version_position + PixelPoint{2, 2}, XCSoar_ProductToken);
 
 #ifndef NDEBUG
   /* Draw debug build warning banner below logo (like "Remove before flight") */

@@ -68,6 +68,10 @@ ProgressWindow::UpdateLayout(PixelRect rc) noexcept
   message_position.top = message_position.bottom -
     text_height * message_lines;
 
+  /* the branded layout fills its area to the bottom */
+  if (LogoView::HasBranding())
+    logo_position.bottom = message_position.top;
+
   bottom_position = rc;
   bottom_position.top = bottom_position.bottom - progress_border_height;
 
