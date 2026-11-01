@@ -32,7 +32,7 @@ PagerWidget::Add(std::unique_ptr<Widget> w) noexcept
   if (initialised) {
     child.widget->Initialise(*parent, position);
 
-    if (prepared) {
+    if (prepared && (!lazy_prepare || (visible && was_empty))) {
       child.prepared = true;
       child.widget->Prepare(*parent, position);
 
@@ -223,6 +223,10 @@ PagerWidget::Prepare(ContainerWindow &_parent, const PixelRect &rc) noexcept
   visible = false;
   parent = &_parent;
   position = rc;
+
+  /* lazily: Show() and SetCurrent() prepare the page they show */
+  if (lazy_prepare)
+    return;
 
   for (auto &i : children) {
     assert(!i.prepared);

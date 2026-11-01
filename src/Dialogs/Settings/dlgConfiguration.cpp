@@ -492,6 +492,8 @@ void dlgConfigurationShowModal()
   pager = new ArrowPagerWidget(look.button,
                                [&dialog](){ OnCloseClicked(dialog); },
                                std::make_unique<ConfigurationExtraButtons>(look));
+  /* preparing all 40 or so pages took 1.8 s on the ESP32-P4 */
+  pager->SetLazyPrepare();
 
   auto _menu = std::make_unique<TabMenuDisplay>(*pager, look);
   auto &menu = *_menu;

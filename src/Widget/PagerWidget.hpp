@@ -33,6 +33,11 @@ class PagerWidget : public Widget {
 
   bool initialised = false, prepared, visible;
 
+  /**
+   * Prepare a page only when it is first shown; see SetLazyPrepare().
+   */
+  bool lazy_prepare = false;
+
   ContainerWindow *parent;
   PixelRect position;
 
@@ -53,6 +58,16 @@ public:
 
   const PixelRect &GetPosition() const noexcept {
     return position;
+  }
+
+  /**
+   * Prepare each page only when it is first shown, instead of all of
+   * them in Prepare().  Call before Prepare().  Only for pagers whose
+   * pages do not use each other's windows.
+   */
+  void SetLazyPrepare() noexcept {
+    assert(!initialised || !prepared);
+    lazy_prepare = true;
   }
 
   /**
