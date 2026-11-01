@@ -11,6 +11,7 @@
 #include "util/OffsetPointer.hxx"
 
 #include <algorithm>
+#include <cstdint>
 #include <concepts>
 #include <string.h>
 
@@ -529,7 +530,20 @@ struct RGB565PixelTraits {
   }
 
   static void FillPixels(pointer p, unsigned n, color_type c) noexcept {
-    std::fill_n(p, n, c);
+    /* two pixels per 32 bit store: std::fill_n() writes one per store,
+       which on the ESP32-P4 fills PSRAM about 25% slower */
+    const uint16_t value = c.GetNativeValue();
+    auto *q = reinterpret_cast<uint16_t *>(p);
+    if (n > 0 && (reinterpret_cast<std::uintptr_t>(q) & 2) != 0) {
+      *q++ = value;
+      --n;
+    }
+
+    auto *w = reinterpret_cast<uint32_t *>(q);
+    std::fill_n(w, n / 2, uint32_t(value) << 16 | value);
+
+    if (n & 1)
+      reinterpret_cast<uint16_t *>(w + n / 2)[0] = value;
   }
 
   static void CopyPixels(rpointer p,
