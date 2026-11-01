@@ -355,6 +355,21 @@ struct TempAirspace
   }
 
   void
+  AppendArcPoints(const GeoPoint center, double radius, Angle start,
+                  Angle end, Angle step, Angle threshold)
+  {
+    unsigned count = 0;
+    for (Angle bearing = start; (end - bearing).Absolute() > threshold;
+         bearing += step)
+      ++count;
+
+    const std::size_t old_size = points.size();
+    points.resize(old_size + count);
+    FindArcPoints(center, radius, start, step,
+                  std::span{points}.subspan(old_size));
+  }
+
+  void
   AppendArc(const GeoPoint start, const GeoPoint end)
   {
     const auto center = RequireCenter();
@@ -384,10 +399,8 @@ struct TempAirspace
     points.push_back(start);
 
     // Add intermediate polygon points
-    while ((end_bearing - start_bearing).Absolute() > threshold) {
-      start_bearing += step;
-      points.push_back(FindLatitudeLongitude(center, start_bearing, radius));
-    }
+    AppendArcPoints(center, radius, start_bearing, end_bearing, step,
+                    threshold);
 
     // Add last polygon point
     points.push_back(end);
@@ -415,10 +428,7 @@ struct TempAirspace
     points.push_back(FindLatitudeLongitude(center, start, radius));
 
     // Add intermediate polygon points
-    while ((end - start).Absolute() > threshold) {
-      start += step;
-      points.push_back(FindLatitudeLongitude(center, start, radius));
-    }
+    AppendArcPoints(center, radius, start, end, step, threshold);
 
     // Add last polygon point
     points.push_back(FindLatitudeLongitude(center, end, radius));

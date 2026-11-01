@@ -10,7 +10,7 @@
 
 int main()
 {
-  plan_tests(80);
+  plan_tests(81);
 
   // test constructor
   GeoPoint p1(Angle::Degrees(345.32), Angle::Degrees(-6.332));
@@ -166,6 +166,21 @@ int main()
     find_lat_lon_okay = equals(p_test.Distance(p1), 50000) && find_lat_lon_okay;
   }
   ok1(find_lat_lon_okay);
+
+  bool arc_points_okay = true;
+  for (const double radius : {2000., 30000., 100000.}) {
+    for (const Angle step : {Angle::Degrees(1), Angle::Degrees(-3)}) {
+      const Angle start = Angle::Degrees(37);
+      GeoPoint arc[123];
+      FindArcPoints(p1, radius, start, step, arc);
+      for (unsigned i = 0; i < std::size(arc); ++i) {
+        const GeoPoint exact =
+          FindLatitudeLongitude(p1, start + step * double(i + 1), radius);
+        arc_points_okay = arc[i].Distance(exact) < 2 && arc_points_okay;
+      }
+    }
+  }
+  ok1(arc_points_okay);
 
   v = l1.DistanceBearing(l2);
   // 116090 @ 343

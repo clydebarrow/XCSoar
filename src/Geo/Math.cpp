@@ -8,7 +8,10 @@
 #include "GeoPoint.hpp"
 #include "Math/Util.hpp"
 
+#include <algorithm>
 #include <cassert>
+#include <cmath>
+#include <tuple>
 
 using namespace WGS84;
 
@@ -367,4 +370,83 @@ Bearing(const GeoPoint &loc1, const GeoPoint &loc2) noexcept
   Angle bearing;
   DistanceBearing(loc1, loc2, nullptr, &bearing);
   return bearing;
+}
+
+void
+FindArcPoints(const GeoPoint &center, const double radius,
+              const Angle start, const Angle step,
+              const std::span<GeoPoint> points) noexcept
+{
+  static constexpr unsigned EXACT_STEPS = 10;
+
+  /* offsets from the center, in radians, on the plane that touches
+     the ellipsoid there, plus the second-order terms of a sphere */
+  constexpr double e2 = FLATTENING * (2 - FLATTENING);
+  const auto [sin_lat, cos_lat] = center.latitude.SinCos();
+  const double w = std::sqrt(1 - e2 * Square(sin_lat));
+  const double north = radius * w * w * w / (EQUATOR_RADIUS * (1 - e2));
+  const double east = radius * w / (EQUATOR_RADIUS * cos_lat);
+  const double tan_lat = sin_lat / cos_lat;
+  const double d = radius * w / EQUATOR_RADIUS;
+
+  struct Offset { double longitude, latitude; };
+
+  const auto approximate = [&](double sin_b, double cos_b) noexcept {
+    return Offset{
+      east * sin_b * (1 + d * cos_b * tan_lat),
+      north * cos_b - 0.5 * Square(d) * Square(sin_b) * tan_lat,
+    };
+  };
+
+  const auto to_point = [&](Offset o) noexcept {
+    return GeoPoint(center.longitude + Angle::Radians(o.longitude),
+                    center.latitude + Angle::Radians(o.latitude));
+  };
+
+  /* the exact point at step #i and the approximation's error there */
+  const auto exact = [&](unsigned i, double &sin_b, double &cos_b,
+                         Offset &error) noexcept {
+    const Angle bearing = start + step * double(i);
+    std::tie(sin_b, cos_b) = bearing.SinCos();
+    const GeoPoint p = FindLatitudeLongitude(center, bearing, radius);
+    const Offset a = approximate(sin_b, cos_b);
+    error = {
+      (p.longitude - center.longitude).AsDelta().Radians() - a.longitude,
+      (p.latitude - center.latitude).Radians() - a.latitude,
+    };
+    return p;
+  };
+
+  const auto [step_sin, step_cos] = step.SinCos();
+  const unsigned count = points.size();
+
+  double sin_b, cos_b;
+  Offset error0;
+  exact(0, sin_b, cos_b, error0);
+
+  for (unsigned first = 0; first < count;) {
+    const unsigned last = std::min(first + EXACT_STEPS, count);
+    double last_sin, last_cos;
+    Offset error1;
+    points[last - 1] = exact(last, last_sin, last_cos, error1);
+
+    for (unsigned i = first + 1; i < last; ++i) {
+      /* rotate by one step */
+      const double next_sin = sin_b * step_cos + cos_b * step_sin;
+      cos_b = cos_b * step_cos - sin_b * step_sin;
+      sin_b = next_sin;
+
+      const double t = double(i - first) / double(last - first);
+      const Offset a = approximate(sin_b, cos_b);
+      points[i - 1] = to_point({
+        a.longitude + error0.longitude + (error1.longitude - error0.longitude) * t,
+        a.latitude + error0.latitude + (error1.latitude - error0.latitude) * t,
+      });
+    }
+
+    sin_b = last_sin;
+    cos_b = last_cos;
+    error0 = error1;
+    first = last;
+  }
 }
