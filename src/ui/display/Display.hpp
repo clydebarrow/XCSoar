@@ -133,13 +133,22 @@ public:
                                std::span<const PixelRect> dirty,
                                void *ctx) noexcept;
 
+  /**
+   * Returns once the host has read the last frame; with one, the
+   * #FlipHandler may return before that.
+   */
+  using WaitHandler = void (*)(void *ctx) noexcept;
+
 private:
   static inline FlipHandler flip_handler = nullptr;
+  static inline WaitHandler wait_handler = nullptr;
   static inline void *flip_ctx = nullptr;
 
 public:
-  static void SetFlipHandler(FlipHandler handler, void *ctx) noexcept {
+  static void SetFlipHandler(FlipHandler handler, WaitHandler wait,
+                             void *ctx) noexcept {
     flip_handler = handler;
+    wait_handler = wait;
     flip_ctx = ctx;
   }
 
@@ -147,6 +156,14 @@ public:
             std::span<const PixelRect> dirty) const noexcept {
     if (flip_handler != nullptr)
       flip_handler(pixels, pitch, dirty, flip_ctx);
+  }
+
+  /**
+   * Wait until the frame passed to Flip() may be changed.
+   */
+  void WaitFlip() const noexcept {
+    if (wait_handler != nullptr)
+      wait_handler(flip_ctx);
   }
 };
 

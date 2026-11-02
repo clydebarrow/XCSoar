@@ -47,13 +47,22 @@ FlipToHost(const void *pixels, unsigned pitch,
   config.frame_ready(pixels, pitch, rects, n, config.ctx);
 }
 
+static void
+WaitForHost(void *ctx) noexcept
+{
+  const auto &config = *static_cast<const Config *>(ctx);
+  config.frame_wait(config.ctx);
+}
+
 static const Config *host_config;
 
 void
 ConnectDisplay(const Config &config) noexcept
 {
   host_config = &config;
-  UI::Display::SetFlipHandler(FlipToHost, const_cast<Config *>(&config));
+  UI::Display::SetFlipHandler(FlipToHost,
+                              config.frame_wait != nullptr ? WaitForHost : nullptr,
+                              const_cast<Config *>(&config));
 
   /* the map buffers grow to the full screen in pan mode; allocating
      them at that size from the start keeps the heap unfragmented */

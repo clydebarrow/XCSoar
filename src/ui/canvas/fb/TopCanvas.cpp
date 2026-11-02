@@ -69,6 +69,9 @@ GetSize(const struct fb_var_screeninfo &vinfo) noexcept
 
 TopCanvas::~TopCanvas() noexcept
 {
+#ifdef USE_EXTERNAL_FB
+  display.WaitFlip();
+#endif
   buffer.Free();
 
 #ifdef USE_FB
@@ -229,6 +232,9 @@ TopCanvas::CheckResize(const PixelSize new_native_size) noexcept
   map_pitch = finfo.line_length;
 #endif
 
+#ifdef USE_EXTERNAL_FB
+  display.WaitFlip();
+#endif
   buffer.Free();
   buffer.Allocate(new_size);
   return true;
@@ -237,6 +243,10 @@ TopCanvas::CheckResize(const PixelSize new_native_size) noexcept
 Canvas
 TopCanvas::Lock()
 {
+#ifdef USE_EXTERNAL_FB
+  /* the host may still be reading the last frame */
+  display.WaitFlip();
+#endif
   return Canvas(buffer);
 }
 

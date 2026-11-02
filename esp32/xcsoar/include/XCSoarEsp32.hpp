@@ -239,13 +239,22 @@ struct Config {
    * Called on the XCSoar task each time a frame is finished.  The
    * frame is width * height pixels in the format BytesPerPixel()
    * describes, with each row starting #pitch bytes after the previous
-   * one.  The pixels are only valid until this function returns.
-   * Only the #dirty_count areas in #dirty have changed since the
-   * previous frame.
+   * one.  The pixels are only valid until this function returns,
+   * or with #frame_wait, until frame_wait() returns.  Only the
+   * #dirty_count areas in #dirty have changed since the previous
+   * frame.
    */
   void (*frame_ready)(const void *pixels, unsigned pitch,
                       const Rect *dirty, unsigned dirty_count,
                       void *ctx) noexcept;
+
+  /**
+   * Called on the XCSoar task before it changes the pixels of the
+   * last frame; returns once the host has read them.  This lets
+   * frame_ready() return while the host is still reading the frame.
+   * nullptr if frame_ready() reads it before returning.
+   */
+  void (*frame_wait)(void *ctx) noexcept;
   void *ctx;
 
   /**
