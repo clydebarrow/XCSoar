@@ -445,6 +445,9 @@ GlueMapWindow::OnMouseWheel([[maybe_unused]] PixelPoint p,
 bool
 GlueMapWindow::OnMultiTouchDown() noexcept
 {
+  /* a second finger makes this a two-finger gesture, not a long press */
+  long_press_timer.Cancel();
+
   if (InfoBoxArrange::IsActive())
     return true;
 
@@ -819,6 +822,9 @@ GlueMapWindow::OnPaintBuffer(Canvas &canvas) noexcept
 void
 GlueMapWindow::OnLongPress() noexcept
 {
+  if (GestureOwnsMap())
+    return;
+
   /* drop the gesture or drag the finger started, and ignore its
      release */
   if (drag_mode == DRAG_GESTURE) {
