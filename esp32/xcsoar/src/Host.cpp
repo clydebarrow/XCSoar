@@ -6,6 +6,7 @@
 #include "Device/Port/HostPort.hpp"
 #include "Monitor/HostTrafficAlarm.hpp"
 #include "Audio/HostVolume.hpp"
+#include "HostClubGlider.hpp"
 #include "ui/canvas/memory/HostDraw.hpp"
 #include "ui/canvas/VirtualCanvas.hpp"
 #include "ui/display/Display.hpp"
@@ -145,6 +146,14 @@ HostTrafficAlarm(FlarmTraffic::AlarmType level) noexcept
   const auto *config = XCSoarEsp32::host_config;
   if (config != nullptr && config->traffic_alarm != nullptr)
     config->traffic_alarm(unsigned(level), config->ctx);
+}
+
+void
+HostClubGlider(const char *type, const char *registration) noexcept
+{
+  const auto *config = XCSoarEsp32::host_config;
+  if (config != nullptr && config->club_glider != nullptr)
+    config->club_glider(type, registration, config->ctx);
 }
 
 bool

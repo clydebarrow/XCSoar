@@ -184,7 +184,7 @@ WasStartupCancelledByUser() noexcept
  * Show the club and the glider from "club.json" on the start and
  * progress screens.
  */
-static void
+void
 ApplyClubBranding() noexcept
 {
   LoadClubConfig();

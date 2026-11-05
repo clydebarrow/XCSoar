@@ -12,6 +12,10 @@
 #include "system/Path.hpp"
 #include "time/BrokenDateTime.hpp"
 
+#ifdef ESP_PLATFORM
+#include "HostClubGlider.hpp"
+#endif
+
 #include <boost/json/serialize.hpp>
 #include <boost/json/value.hpp>
 
@@ -19,6 +23,15 @@
 #include <fmt/format.h>
 
 static ClubConfig club_config;
+
+static void
+NotifyHost() noexcept
+{
+#ifdef ESP_PLATFORM
+  HostClubGlider(club_config.glider_type.c_str(),
+                 club_config.glider_registration.c_str());
+#endif
+}
 
 static std::string
 GetString(const boost::json::object &o, std::string_view key) noexcept
@@ -29,8 +42,8 @@ GetString(const boost::json::object &o, std::string_view key) noexcept
   return {};
 }
 
-void
-LoadClubConfig() noexcept
+static void
+ReadClubConfig() noexcept
 try {
   club_config = {};
 
@@ -60,6 +73,51 @@ try {
 } catch (...) {
   club_config = {};
   LogError(std::current_exception(), "Failed to read club.json");
+}
+
+void
+LoadClubConfig() noexcept
+{
+  ReadClubConfig();
+  NotifyHost();
+}
+
+void
+SaveClubGlider(std::string_view type, std::string_view registration)
+{
+  const auto path = LocalPath("club.json");
+
+  boost::json::object root;
+  if (File::Exists(path)) {
+    FileReader reader{path};
+    auto value = Json::Parse(reader);
+    if (auto *o = value.if_object())
+      root = std::move(*o);
+  }
+
+  boost::json::object glider;
+  if (auto *g = root.if_contains("glider"))
+    if (auto *o = g->if_object())
+      glider = std::move(*o);
+  glider["type"] = type;
+  glider["registration"] = registration;
+  root["glider"] = std::move(glider);
+
+  /* written to a new file that then replaces the old one, so a power
+     loss leaves one or the other */
+  FileOutputStream file(path);
+  BufferedOutputStream writer(file);
+  writer.Write(boost::json::serialize(root));
+  writer.Write('\n');
+  writer.Flush();
+  file.Commit();
+
+  club_config.glider_type = type;
+  club_config.glider_registration = registration;
+  LogFormat("club.json: glider set to %s %s",
+            club_config.glider_type.c_str(),
+            club_config.glider_registration.c_str());
+  NotifyHost();
 }
 
 const ClubConfig &

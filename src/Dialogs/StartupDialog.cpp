@@ -21,6 +21,7 @@
 #include "Repository/FileType.hpp"
 #include "ProfileListDialog.hpp"
 #include "ProfilePasswordDialog.hpp"
+#include "Startup.hpp"
 #include "Screen/Layout.hpp"
 #include "UIGlobals.hpp"
 #include "Widget/ListWidget.hpp"
@@ -351,6 +352,62 @@ CreatePilotProfile(Path template_path) noexcept
 }
 
 /**
+ * The type and registration of the glider the unit is fitted to,
+ * saved in "club.json".
+ */
+class ClubGliderWidget final : public RowFormWidget {
+  enum Controls {
+    TYPE,
+    REGISTRATION,
+  };
+
+public:
+  using RowFormWidget::RowFormWidget;
+
+  void Prepare([[maybe_unused]] ContainerWindow &parent,
+               [[maybe_unused]] const PixelRect &rc) noexcept override {
+    const auto &club = GetClubConfig();
+    AddText(_("Type"), nullptr, club.glider_type.c_str());
+    AddText(_("Registration"),
+            _("The registration, such as GKP for VH-GKP. A FLARM radio "
+              "built into the unit sends the address that belongs to it."),
+            club.glider_registration.c_str());
+  }
+
+  bool Save(bool &changed) noexcept override {
+    const auto &club = GetClubConfig();
+    std::string type = club.glider_type;
+    std::string registration = club.glider_registration;
+    changed |= SaveValue(TYPE, type);
+    changed |= SaveValue(REGISTRATION, registration);
+    if (!changed)
+      return true;
+
+    try {
+      SaveClubGlider(type, registration);
+    } catch (...) {
+      ShowError(std::current_exception(), _("Failed to save file."));
+      return false;
+    }
+    return true;
+  }
+};
+
+static void
+dlgClubGliderShowModal() noexcept
+{
+  TWidgetDialog<ClubGliderWidget>
+    dialog(WidgetDialog::Auto{}, UIGlobals::GetMainWindow(),
+           UIGlobals::GetDialogLook(), _("Glider"));
+  dialog.AddButton(_("OK"), mrOK);
+  dialog.AddButton(_("Cancel"), mrCancel);
+  dialog.SetWidget(UIGlobals::GetDialogLook());
+  if (dialog.ShowModal() == mrOK)
+    /* the start and progress screens show the glider */
+    ApplyClubBranding();
+}
+
+/**
  * With a club configuration: always ask which pilot flies, and offer
  * to add one.
  */
@@ -379,9 +436,19 @@ dlgPilotShowModal() noexcept
       if (new_pilot != nullptr)
         dialog.SetModalResult(mrOK);
     });
+    bool glider = false;
+    dialog.AddButton(_("Glider"), [&](){
+      glider = true;
+      dialog.SetModalResult(mrCancel);
+    });
     dialog.AddButton(_("Quit"), mrCancel);
 
-    if (dialog.ShowModal() != mrOK)
+    const int result = dialog.ShowModal();
+    if (glider) {
+      dlgClubGliderShowModal();
+      continue;
+    }
+    if (result != mrOK)
       return false;
 
     if (SelectProfile(new_pilot != nullptr
