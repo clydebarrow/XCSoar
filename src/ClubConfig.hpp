@@ -4,6 +4,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 
 struct BrokenDateTime;
 
@@ -59,6 +60,14 @@ LoadClubConfig() noexcept;
 [[gnu::pure]]
 const ClubConfig &
 GetClubConfig() noexcept;
+
+/**
+ * Change the glider in "club.json", keeping its other settings, so
+ * that the unit can be moved to another glider.  Creates the file if
+ * there is none.  Throws on error.
+ */
+void
+SaveClubGlider(std::string_view type, std::string_view registration);
 
 /**
  * Queue a flight for #ClubConfig::flight_upload_url, if there is one:

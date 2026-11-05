@@ -30,3 +30,10 @@ SaveUserState() noexcept;
 
 void
 Shutdown();
+
+/**
+ * Read "club.json" and show its club and glider on the start and
+ * progress screens.
+ */
+void
+ApplyClubBranding() noexcept;

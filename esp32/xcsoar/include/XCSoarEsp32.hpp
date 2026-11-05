@@ -301,6 +301,17 @@ struct Config {
   void (*volume)(unsigned percent, bool preview, void *ctx) noexcept;
 
   /**
+   * Called with the type and registration of the glider in
+   * "club.json" (empty strings if there is none): when XCSoar reads
+   * the file at startup and when the user changes the glider.  Called
+   * on an XCSoar thread with #ctx; the strings are only valid during
+   * the call, and it must not block.  nullptr if the host does not
+   * want it.
+   */
+  void (*club_glider)(const char *type, const char *registration,
+                      void *ctx) noexcept;
+
+  /**
    * Fill #rect of a canvas with #argb (0xAARRGGBB): #buffer has
    * #height rows #pitch bytes apart, in the format BytesPerPixel()
    * describes.  Called on XCSoar's drawing threads for large
