@@ -43,11 +43,19 @@ AllocatedPath
 FindByRegistration(const char *registration);
 
 /**
- * Create a new .xcp plane profile from the given polar and identity.
- * An existing file is never replaced; the name gets a number instead.
+ * Create a new .xcp plane profile, named after its registration.  An
+ * existing file is never replaced; the name gets a number instead.
  *
- * @return path of the created file, or nullptr if no name was free
+ * @return path of the created file, or nullptr if the registration
+ * is empty or no name was free
  * Throws on I/O error.
+ */
+AllocatedPath
+Create(const Plane &plane);
+
+/**
+ * Create a new .xcp plane profile from the given polar and identity,
+ * see Create().
  */
 AllocatedPath
 CreateFromPolar(const char *registration,

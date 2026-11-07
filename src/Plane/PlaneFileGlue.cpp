@@ -301,7 +301,13 @@ PlaneGlue::CreateFromPolar(const char *registration,
     plane.polar_shape.SetSinkRates(coeffs);
   }
 
-  const auto safe_name = SanitizeFilename(registration);
+  return Create(plane);
+}
+
+AllocatedPath
+PlaneGlue::Create(const Plane &plane)
+{
+  const auto safe_name = SanitizeFilename(plane.registration.c_str());
   if (safe_name.empty())
     return nullptr;
 

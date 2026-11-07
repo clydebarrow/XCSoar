@@ -75,6 +75,9 @@
 #include "Replay/Replay.hpp"
 #include "DataFilePath.hpp"
 #include "ClubConfig.hpp"
+#include "Plane/Plane.hpp"
+#include "Plane/PlaneFileGlue.hpp"
+#include "Polar/PolarStore.hpp"
 #include "Gauge/LogoView.hpp"
 #include "LocalPath.hpp"
 #include "system/FileUtil.hpp"
@@ -207,6 +210,52 @@ ApplyClubBranding() noexcept
     branding.logo_path = LocalPath(logo).c_str();
 
   LogoView::SetBranding(&branding);
+}
+
+/**
+ * Make the glider in "club.json" the active plane: the plane file with
+ * its registration, or else a new one with the built-in polar of its
+ * type, or the current polar if the type has none.  Its settings, such
+ * as the polar and the masses, can then be changed in the plane list.
+ */
+static void
+ApplyClubPlane(Plane &plane) noexcept
+{
+  const auto &club = GetClubConfig();
+  if (club.glider_registration.empty())
+    return;
+
+  const char *registration = club.glider_registration.c_str();
+  if (plane.plane_profile_active && plane.registration.equals(registration))
+    return;
+
+  try {
+    auto path = PlaneGlue::FindByRegistration(registration);
+    if (path == nullptr) {
+      Plane created = plane;
+      created.registration.SetUTF8(registration);
+      created.competition_id.clear();
+      created.type.SetUTF8(club.glider_type.c_str());
+      created.weglide_glider_type = 0;
+
+      const auto *polar = PolarStore::FindByType(club.glider_type.c_str());
+      if (polar != nullptr)
+        PlaneGlue::ApplyPolar(created, *polar);
+
+      path = PlaneGlue::Create(created);
+      if (path == nullptr)
+        return;
+
+      LogFormat("Created plane %s (%s), polar %s", registration,
+                club.glider_type.c_str(),
+                polar != nullptr ? polar->name : "unchanged");
+    }
+
+    if (PlaneGlue::ReadFile(plane, path))
+      Profile::SetPath("PlanePath", path);
+  } catch (...) {
+    LogError(std::current_exception(), "Failed to select the club glider");
+  }
 }
 
 static bool
@@ -786,6 +835,7 @@ Startup(UI::Display &display)
   gp.SetCrewMass(computer_settings.logger.crew_mass_template);
   PlaneGlue::FromProfile(CommonInterface::SetComputerSettings().plane,
                          Profile::map);
+  ApplyClubPlane(CommonInterface::SetComputerSettings().plane);
   PlaneGlue::Synchronize(computer_settings.plane,
                          CommonInterface::SetComputerSettings(), gp);
   ConfirmSessionRestore();
