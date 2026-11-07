@@ -205,7 +205,7 @@ TestComputer() noexcept
   /* online traffic is too old to warn about */
   AddTarget(flarm, basic.clock, 0x7C0003, 1150, 0, 50,
             FlarmTraffic::SourceType::SKYLINES);
-  computer.Process(flarm, basic);
+  computer.Process(flarm, basic, true);
 
   ok1(flarm.traffic.FindTraffic(FlarmId::FromValue(0x7C0001))->alarm_level ==
       FlarmTraffic::AlarmType::IMPORTANT);
@@ -226,7 +226,7 @@ TestComputer() noexcept
      again from the latest assessment */
   flarm.Clear();
   AddTarget(flarm, basic.clock, 0x7C0001, 1150, 0, 50);
-  computer.Process(flarm, basic);
+  computer.Process(flarm, basic, true);
   ok1(flarm.status.alarm_level == FlarmTraffic::AlarmType::IMPORTANT);
 
   /* a FLARM's own higher alarm is kept */
@@ -235,38 +235,132 @@ TestComputer() noexcept
   flarm.status.available.Update(basic.clock);
   flarm.status.alarm_level = FlarmTraffic::AlarmType::URGENT;
   flarm.status.target_id = FlarmId::FromValue(0x123456);
-  computer.Process(flarm, basic);
+  computer.Process(flarm, basic, true);
   ok1(flarm.status.target_id == FlarmId::FromValue(0x123456));
 
   /* a second later, 5 s from close proximity: urgent */
   SetOwnship(basic, At(11));
   flarm.Clear();
   AddTarget(flarm, basic.clock, 0x7C0001, 650, 0, 50);
-  computer.Process(flarm, basic);
+  computer.Process(flarm, basic, true);
   ok1(flarm.status.alarm_level == FlarmTraffic::AlarmType::URGENT);
 
   /* gone before the next assessment, as when the data stops: the
      cached alarm is not applied */
   flarm.Clear();
-  computer.Process(flarm, basic);
+  computer.Process(flarm, basic, true);
   ok1(!flarm.status.available);
 
   /* once it has gone, nothing is left */
   SetOwnship(basic, At(12));
   flarm.Clear();
-  computer.Process(flarm, basic);
+  computer.Process(flarm, basic, true);
   ok1(!flarm.status.available);
+}
+
+static FlarmTraffic::AlarmType
+TargetAlarm(const FlarmData &flarm, uint32_t id) noexcept
+{
+  return flarm.traffic.FindTraffic(FlarmId::FromValue(id))->alarm_level;
+}
+
+/**
+ * A powered aircraft #north of the ownship on its track, flying north
+ * at the ownship's speed, as a tug is on the tow.
+ */
+static void
+AddTug(FlarmData &flarm, TimeStamp clock, double north) noexcept
+{
+  flarm.Clear();
+  AddTarget(flarm, clock, 0x7C0010, north, 0, 50);
+  FlarmTraffic &t = *flarm.traffic.FindTraffic(FlarmId::FromValue(0x7C0010));
+  t.track = Angle::Zero();
+  t.type = FlarmTraffic::AircraftType::POWERED_AIRCRAFT;
+}
+
+static void
+TestGroundAndTow() noexcept
+{
+  MoreData basic;
+  FlarmData flarm;
+
+  /* a head-on target on the ground raises no alarm in flight, long
+     after takeoff */
+  {
+    ThreatComputer computer;
+    SetOwnship(basic, At(1));
+    flarm.Clear();
+    computer.Process(flarm, basic, true);
+
+    SetOwnship(basic, At(100));
+    flarm.Clear();
+    AddTarget(flarm, basic.clock, 0x7C0001, 1150, 0, 50);
+    flarm.traffic.FindTraffic(FlarmId::FromValue(0x7C0001))->on_ground = true;
+    computer.Process(flarm, basic, true);
+    ok1(TargetAlarm(flarm, 0x7C0001) == FlarmTraffic::AlarmType::NONE);
+    ok1(!flarm.status.available);
+
+    SetOwnship(basic, At(101));
+    flarm.Clear();
+    AddTarget(flarm, basic.clock, 0x7C0001, 1050, 0, 50);
+    computer.Process(flarm, basic, true);
+    ok1(TargetAlarm(flarm, 0x7C0001) != FlarmTraffic::AlarmType::NONE);
+  }
+
+  /* without a takeoff, a powered aircraft 60 m in front raises the
+     alarm */
+  {
+    ThreatComputer computer;
+    SetOwnship(basic, At(1));
+    AddTug(flarm, basic.clock, 60);
+    computer.Process(flarm, basic, false);
+    ok1(TargetAlarm(flarm, 0x7C0010) != FlarmTraffic::AlarmType::NONE);
+  }
+
+  /* after a takeoff it is the tug, and raises no alarm until it has
+     left */
+  {
+    ThreatComputer computer;
+    SetOwnship(basic, At(1));
+    flarm.Clear();
+    computer.Process(flarm, basic, false);
+
+    SetOwnship(basic, At(5));
+    AddTug(flarm, basic.clock, 60);
+    flarm.traffic.FindTraffic(FlarmId::FromValue(0x7C0010))->on_ground = true;
+    computer.Process(flarm, basic, true);
+    ok1(TargetAlarm(flarm, 0x7C0010) == FlarmTraffic::AlarmType::NONE);
+
+    /* on the tow, well after the search for the tug has ended */
+    SetOwnship(basic, At(300));
+    AddTug(flarm, basic.clock, 100);
+    computer.Process(flarm, basic, true);
+    ok1(TargetAlarm(flarm, 0x7C0010) == FlarmTraffic::AlarmType::NONE);
+    ok1(!flarm.status.available);
+
+    /* released */
+    SetOwnship(basic, At(320));
+    AddTug(flarm, basic.clock, 400);
+    computer.Process(flarm, basic, true);
+
+    /* back again: now traffic like any other */
+    SetOwnship(basic, At(330));
+    AddTug(flarm, basic.clock, 60);
+    computer.Process(flarm, basic, true);
+    ok1(TargetAlarm(flarm, 0x7C0010) != FlarmTraffic::AlarmType::NONE);
+  }
 }
 
 int
 main()
 {
-  plan_tests(39);
+  plan_tests(47);
 
   TestScore();
   TestAlarm();
   TestTurns();
   TestComputer();
+  TestGroundAndTow();
 
   return exit_status();
 }

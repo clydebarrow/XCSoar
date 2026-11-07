@@ -39,6 +39,24 @@ private:
    */
   bool geo_altitude_is_msl = false;
 
+  /** UTC seconds since midnight of the latest heartbeat, if any */
+  unsigned heartbeat_seconds = 0;
+  bool heartbeat_valid = false;
+
+  /**
+   * The ownship pressure altitude at #vario_seconds, for a vertical
+   * speed when the ownship report has none.  The arrival times of the
+   * reports are useless for this: Wi-Fi delivers them in bursts.
+   */
+  double vario_altitude = 0;
+  unsigned vario_seconds = 0;
+  bool vario_altitude_valid = false;
+  double vario = 0;
+
+  void ProvideOwnshipVario(uint16_t v_code, bool pressure_altitude_valid,
+                           double pressure_altitude,
+                           NMEAInfo &info) noexcept;
+
   void ParseTrafficReport(std::span<const uint8_t> payload,
                           NMEAInfo &info) noexcept;
 

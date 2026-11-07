@@ -109,9 +109,20 @@ static constexpr int GDL90_VEL12_SIGN_EXTEND = 0x1000;
 static constexpr int GDL90_VERTICAL_RATE_FPM_PER_LSB = 64;
 static constexpr double GDL90_FPM_TO_METERS_PER_SECOND = 0.00508;
 
+/* Smoothing of the vertical speed from the pressure altitude, whose
+   25 ft steps once a second are too coarse to use directly */
+static constexpr double GDL90_VARIO_SMOOTHING_S = 3;
+/* a longer gap starts the vertical speed again */
+static constexpr unsigned GDL90_VARIO_MAX_GAP_S = 5;
+
 /* Track: byte scale 256/360° (ICD §3.5.1); status in altitude word low bits */
 static constexpr uint8_t GDL90_TRACK_BYTE_INVALID = 0xff;
 static constexpr uint8_t GDL90_TRACK_STATUS_MASK = 0x03;
+/* Misc bit 3: air/ground state, 1 = airborne (ICD §3.5.1.5) */
+static constexpr uint8_t GDL90_MISC_AIRBORNE_MASK = 0x08;
+/* A target is taken as on the ground only when it is also this slow, so
+   that a sender which never sets the airborne bit loses no alarms */
+static constexpr double GDL90_ON_GROUND_MAX_SPEED_KT = 25;
 static constexpr double GDL90_TRACK_DEG_PER_BYTE = 360.0 / 256.0;
 
 /* Callsign field (ICD §3.5.1.11) */
@@ -384,6 +395,8 @@ GDL90Device::ParseHeartbeat(std::span<const uint8_t> payload,
     return;
 
   info.ProvideTime(TimeStamp{FloatDuration{double(seconds)}});
+  heartbeat_seconds = seconds;
+  heartbeat_valid = true;
 
   /* Heartbeat ICD §3.1 carries TOD only; optional host UTC calendar. */
   if (gdl90_settings.use_system_utc_date) {
@@ -419,17 +432,21 @@ GDL90Device::ParseOwnshipReport(std::span<const uint8_t> payload,
   const uint16_t alt_word = ReadBE16(payload, 10);
   const uint16_t altitude_code = alt_word >> GDL90_ALT_WORD_CODE_SHIFT;
   const uint8_t misc = uint8_t(alt_word & GDL90_ALT_WORD_MISC_MASK);
-  if (altitude_code != GDL90_PRESSURE_ALT_INVALID) {
+  const bool pressure_altitude_valid =
+    altitude_code != GDL90_PRESSURE_ALT_INVALID;
+  double pressure_altitude = 0;
+  if (pressure_altitude_valid) {
     const int altitude_ft = int(altitude_code) * GDL90_PRESSURE_ALT_FT_LSB -
       GDL90_PRESSURE_ALT_FT_OFFSET;
-    const double pressure_altitude =
-      Units::ToSysUnit(altitude_ft, Unit::FEET);
+    pressure_altitude = Units::ToSysUnit(altitude_ft, Unit::FEET);
     info.ProvidePressureAltitude(pressure_altitude);
   }
 
   /* 24-bit BE velocity: top 12 bits = ground speed (kt), bottom 12 = vert
-     rate; ownship uses horizontal component only here. */
+     rate. */
   const uint32_t vel = ReadBE24(payload, 13);
+  ProvideOwnshipVario(uint16_t(vel & GDL90_VEL_VERTICAL_MASK),
+                      pressure_altitude_valid, pressure_altitude, info);
   const uint16_t h_code = uint16_t((vel >> GDL90_VEL_HORIZONTAL_SHIFT) &
                                     GDL90_VEL_HORIZONTAL_MASK);
   if (h_code != GDL90_VEL_HORIZONTAL_INVALID) {
@@ -449,6 +466,62 @@ GDL90Device::ParseOwnshipReport(std::span<const uint8_t> payload,
   info.gps.fix_quality = FixQuality::GPS;
   info.gps.fix_quality_available.Update(info.clock);
   info.gps.real = true;
+}
+
+/**
+ * Sign-extend a 12-bit vertical rate and convert it to m/s.
+ */
+static double
+VerticalRate(uint16_t v_code) noexcept
+{
+  int16_t v_signed = int16_t(v_code);
+  if ((v_signed & int16_t(GDL90_VEL12_SIGN_BIT)) != 0)
+    v_signed = int16_t(v_signed - GDL90_VEL12_SIGN_EXTEND);
+
+  return double(v_signed) * double(GDL90_VERTICAL_RATE_FPM_PER_LSB) *
+    GDL90_FPM_TO_METERS_PER_SECOND;
+}
+
+void
+GDL90Device::ProvideOwnshipVario(uint16_t v_code,
+                                 bool pressure_altitude_valid,
+                                 double pressure_altitude,
+                                 NMEAInfo &info) noexcept
+{
+  /* Without a vertical speed, XCSoar would divide each 25 ft step of
+     the pressure altitude by the time between two arrivals. */
+  if (v_code != GDL90_VEL_VERTICAL_NO_INFO) {
+    info.ProvideNoncompVario(VerticalRate(v_code));
+    vario_altitude_valid = false;
+    return;
+  }
+
+  if (!pressure_altitude_valid || !heartbeat_valid) {
+    vario_altitude_valid = false;
+    return;
+  }
+
+  if (vario_altitude_valid && heartbeat_seconds == vario_seconds)
+    /* a second report in the same second */
+    return;
+
+  if (vario_altitude_valid) {
+    const unsigned dt = (heartbeat_seconds + GDL90_SECONDS_PER_DAY -
+                         vario_seconds) % GDL90_SECONDS_PER_DAY;
+    if (dt <= GDL90_VARIO_MAX_GAP_S) {
+      const double rate = (pressure_altitude - vario_altitude) / dt;
+      vario += (rate - vario) * dt / (GDL90_VARIO_SMOOTHING_S + dt);
+      info.ProvideNoncompVario(vario);
+    } else {
+      vario = 0;
+    }
+  } else {
+    vario = 0;
+  }
+
+  vario_altitude = pressure_altitude;
+  vario_seconds = heartbeat_seconds;
+  vario_altitude_valid = true;
 }
 
 void
@@ -640,15 +713,8 @@ GDL90Device::ParseTrafficReport(std::span<const uint8_t> payload,
   /* Lower 12 bits: vertical speed; 0x800 means “no information”. */
   bool climb_rate_received = v_code != GDL90_VEL_VERTICAL_NO_INFO;
   double climb_rate = 0;
-  if (climb_rate_received) {
-    /* Sign-extend 12-bit two's complement to 16 bits. */
-    int16_t v_signed = int16_t(v_code);
-    if ((v_signed & int16_t(GDL90_VEL12_SIGN_BIT)) != 0)
-      v_signed = int16_t(v_signed - GDL90_VEL12_SIGN_EXTEND);
-
-    climb_rate = double(v_signed) * double(GDL90_VERTICAL_RATE_FPM_PER_LSB) *
-      GDL90_FPM_TO_METERS_PER_SECOND;
-  }
+  if (climb_rate_received)
+    climb_rate = VerticalRate(v_code);
 
   const uint8_t track_byte = payload[16];
   const bool track_valid = (misc & GDL90_TRACK_STATUS_MASK) != 0;
@@ -759,6 +825,9 @@ GDL90Device::ParseTrafficReport(std::span<const uint8_t> payload,
      climb_rate_avg30s_* for FlarmComputer. */
   slot->stealth = false;
   slot->no_track = false;
+  slot->on_ground = (misc & GDL90_MISC_AIRBORNE_MASK) == 0 &&
+    speed_received &&
+    speed < Units::ToSysUnit(GDL90_ON_GROUND_MAX_SPEED_KT, Unit::KNOTS);
   slot->rssi_available = false;
   slot->source_received = false;
   slot->turn_rate_received = false;
