@@ -283,6 +283,15 @@ public:
   bool IsTransparent() const noexcept { return transparent; }
 
   /**
+   * Does OnPaint() paint all of the window?  A plain #ContainerWindow
+   * paints only its children, so what is between them is left as it
+   * was, and repainting it alone does not clear a hidden child.
+   */
+  virtual bool PaintsBackground() const noexcept {
+    return true;
+  }
+
+  /**
    * Declare this window "transparent".  This means that portions of
    * the windows below it may be visible, and it will not be
    * considered "covering" windows behind it completely.  This flag is

@@ -51,6 +51,10 @@ protected:
   void OnPaint(Canvas &canvas) noexcept override;
 
 public:
+  bool PaintsBackground() const noexcept override {
+    return false;
+  }
+
   void AddChild(Window &child) noexcept;
   void RemoveChild(Window &child) noexcept;
 
