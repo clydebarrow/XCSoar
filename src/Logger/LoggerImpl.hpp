@@ -82,6 +82,11 @@ private:
   LoggerFRecord frecord;
 
   /**
+   * B records written since the file was last synced to the storage
+   */
+  unsigned points_since_sync = 0;
+
+  /**
    * If at least one GPS fix came from the simulator
    * (NMEA_INFO.Simulator), then this flag is true, and signing is
    * disabled.

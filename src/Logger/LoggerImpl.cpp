@@ -15,6 +15,11 @@
 
 #include <algorithm>
 
+/**
+ * How many B records are written between syncs of the IGC file
+ */
+static constexpr unsigned SYNC_POINTS = 30;
+
 const struct LoggerImpl::PreTakeoffBuffer &
 LoggerImpl::PreTakeoffBuffer::operator=(const NMEAInfo &src)
 {
@@ -172,7 +177,20 @@ LoggerImpl::LogPoint(const NMEAInfo &gps_info)
     WritePoint(tmp_info);
   }
 
-  return WritePoint(gps_info);
+  const bool written = WritePoint(gps_info);
+
+  /* a FAT file system records the file's size only when it is
+     synced, so without this a power loss leaves an empty file */
+  if (written && ++points_since_sync >= SYNC_POINTS) {
+    points_since_sync = 0;
+    try {
+      writer->Sync();
+    } catch (...) {
+      LogError(std::current_exception());
+    }
+  }
+
+  return written;
 }
 
 bool
@@ -228,6 +246,7 @@ LoggerImpl::StartLogger(const NMEAInfo &gps_info,
 
   try {
     writer = std::make_unique<IGCWriter>(filename);
+    points_since_sync = 0;
   } catch (...) {
     LogError(std::current_exception());
     return false;
