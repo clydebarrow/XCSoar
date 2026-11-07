@@ -3,10 +3,12 @@
 
 #include "StartupDialog.hpp"
 #include "ClubConfig.hpp"
+#include "ComboPicker.hpp"
 #include "Error.hpp"
 #include "Message.hpp"
 #include "TextEntry.hpp"
 #include "Form/Button.hpp"
+#include "Form/DataField/ComboList.hpp"
 #include "Form/DataField/File.hpp"
 #include "Form/Form.hpp"
 #include "Gauge/LogoView.hpp"
@@ -18,6 +20,8 @@
 #include "Profile/Keys.hpp"
 #include "Profile/Map.hpp"
 #include "Profile/Profile.hpp"
+#include "Plane/Plane.hpp"
+#include "Plane/PlaneFileGlue.hpp"
 #include "Repository/FileType.hpp"
 #include "ProfileListDialog.hpp"
 #include "ProfilePasswordDialog.hpp"
@@ -32,6 +36,10 @@
 #include "ui/canvas/Canvas.hpp"
 #include "util/StaticString.hxx"
 #include "util/StringAPI.hxx"
+
+#include <algorithm>
+#include <string>
+#include <vector>
 
 class LogoWindow final : public PaintWindow {
   LogoView logo;
@@ -366,22 +374,23 @@ public:
 
   void Prepare([[maybe_unused]] ContainerWindow &parent,
                [[maybe_unused]] const PixelRect &rc) noexcept override {
-    const auto &club = GetClubConfig();
-    AddText(_("Type"), nullptr, club.glider_type.c_str());
+    AddText(_("Type"),
+            _("The glider type, such as PW6 or SZD55-1: its polar is "
+              "looked up by this name."),
+            "");
     AddText(_("Registration"),
             _("The registration, such as GKP for VH-GKP. A FLARM radio "
               "built into the unit sends the address that belongs to it."),
-            club.glider_registration.c_str());
+            "");
   }
 
   bool Save(bool &changed) noexcept override {
-    const auto &club = GetClubConfig();
-    std::string type = club.glider_type;
-    std::string registration = club.glider_registration;
-    changed |= SaveValue(TYPE, type);
-    changed |= SaveValue(REGISTRATION, registration);
-    if (!changed)
+    std::string type, registration;
+    SaveValue(TYPE, type);
+    SaveValue(REGISTRATION, registration);
+    if (registration.empty())
       return true;
+    changed = true;
 
     try {
       SaveClubGlider(type, registration);
@@ -393,8 +402,75 @@ public:
   }
 };
 
+struct KnownGlider {
+  std::string type, registration;
+};
+
+/**
+ * The gliders that have a plane file, and the one in "club.json",
+ * sorted by registration.
+ */
+static std::vector<KnownGlider>
+ListKnownGliders() noexcept
+{
+  std::vector<KnownGlider> gliders;
+
+  auto add = [&gliders](const char *type, const char *registration) {
+    if (*registration == '\0')
+      return;
+    for (const auto &g : gliders)
+      if (StringIsEqualIgnoreCase(g.registration.c_str(), registration))
+        return;
+    gliders.push_back({type, registration});
+  };
+
+  const auto &club = GetClubConfig();
+  add(club.glider_type.c_str(), club.glider_registration.c_str());
+
+  class Visitor final : public File::Visitor {
+    decltype(add) &add_glider;
+
+  public:
+    explicit Visitor(decltype(add) &_add) noexcept :add_glider(_add) {}
+
+    void Visit(Path path, [[maybe_unused]] Path filename) override {
+      Plane plane{};
+      if (PlaneGlue::ReadFile(plane, path))
+        add_glider(plane.type.c_str(), plane.registration.c_str());
+    }
+  } visitor{add};
+
+  try {
+    VisitDataFiles(GetFileTypePatterns(FileType::PLANE), visitor);
+  } catch (...) {
+    LogError(std::current_exception(), "Failed to list the planes");
+  }
+
+  std::sort(gliders.begin(), gliders.end(), [](const auto &a, const auto &b){
+    return a.registration < b.registration;
+  });
+  return gliders;
+}
+
 static void
-dlgClubGliderShowModal() noexcept
+SaveGlider(const char *type, const char *registration) noexcept
+{
+  try {
+    SaveClubGlider(type, registration);
+  } catch (...) {
+    ShowError(std::current_exception(), _("Failed to save file."));
+    return;
+  }
+
+  /* the start and progress screens show the glider */
+  ApplyClubBranding();
+}
+
+/**
+ * Enter a glider not flown before.
+ */
+static void
+dlgNewClubGliderShowModal() noexcept
 {
   TWidgetDialog<ClubGliderWidget>
     dialog(WidgetDialog::Auto{}, UIGlobals::GetMainWindow(),
@@ -403,8 +479,52 @@ dlgClubGliderShowModal() noexcept
   dialog.AddButton(_("Cancel"), mrCancel);
   dialog.SetWidget(UIGlobals::GetDialogLook());
   if (dialog.ShowModal() == mrOK)
-    /* the start and progress screens show the glider */
     ApplyClubBranding();
+}
+
+/**
+ * Pick the glider the unit is fitted to from those flown before, or
+ * enter a new one.
+ */
+static void
+dlgClubGliderShowModal() noexcept
+{
+  const auto gliders = ListKnownGliders();
+  if (gliders.empty()) {
+    dlgNewClubGliderShowModal();
+    return;
+  }
+
+  static constexpr int NEW_GLIDER = -1;
+
+  const auto &club = GetClubConfig();
+  ComboList list;
+  for (unsigned i = 0; i < gliders.size(); ++i) {
+    const auto &g = gliders[i];
+    StaticString<80> label;
+    if (g.type.empty())
+      label = g.registration.c_str();
+    else
+      label.Format("%s  (%s)", g.registration.c_str(), g.type.c_str());
+    const unsigned index = list.Append(int(i), label.c_str());
+    if (StringIsEqualIgnoreCase(g.registration.c_str(),
+                                club.glider_registration.c_str()))
+      list.current_index = index;
+  }
+  list.Append(NEW_GLIDER, _("New glider..."));
+
+  const int result = ComboPicker(_("Glider"), list);
+  if (result < 0)
+    return;
+
+  const int value = list[result].int_value;
+  if (value == NEW_GLIDER) {
+    dlgNewClubGliderShowModal();
+    return;
+  }
+
+  const auto &g = gliders[value];
+  SaveGlider(g.type.c_str(), g.registration.c_str());
 }
 
 /**

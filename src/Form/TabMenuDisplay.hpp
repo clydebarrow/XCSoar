@@ -264,6 +264,12 @@ private:
 
   void DragEnd() noexcept;
 
+  /* only the buttons are painted: a shorter sub menu leaves the rest
+     of the previous one to the window behind */
+  bool PaintsBackground() const noexcept override {
+    return false;
+  }
+
 protected:
   void OnResize(PixelSize new_size) noexcept override;
 

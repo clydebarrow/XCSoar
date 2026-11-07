@@ -23,6 +23,11 @@ public:
     PaintWindow::Create(parent, rc, style);
   }
 
+  /* the callback need not paint all of the window */
+  bool PaintsBackground() const noexcept override {
+    return false;
+  }
+
 protected:
   /**
    * The callback function for painting the content of the control
