@@ -25,6 +25,11 @@ struct MoreData;
  * one becomes the alarm in FlarmStatus (as a FLARM's $PFLAU), unless
  * a FLARM reports a higher one.  This gives the same warnings as a
  * FLARM: the traffic gauge and map colors, and the spoken alert.
+ *
+ * Targets reported on the ground raise no alarm.  On an aerotow, the
+ * tug is found just after takeoff, as the powered aircraft close in
+ * front moving with the ownship, and raises no alarm until it is
+ * further away than on the tow.
  */
 class ThreatComputer {
   /**
@@ -66,6 +71,15 @@ class ThreatComputer {
   /** the time to close proximity of #status at #last_time */
   float proximity_time = 0;
 
+  /** whether the ownship was flying at the last call */
+  bool was_flying = false;
+
+  /** when the ownship took off, while the tug is looked for */
+  TimeStamp tow_search_start = TimeStamp::Undefined();
+
+  /** the tug, until it leaves the ownship */
+  FlarmId tow_id = FlarmId::Undefined();
+
 public:
   ThreatComputer() noexcept {
     settings.alarm_distance = ALARM_DISTANCE;
@@ -76,11 +90,17 @@ public:
    * Assess the traffic at most once a second, and apply the latest
    * alarms to #flarm.  Call after FlarmComputer::Process(), which
    * fills in the targets' relative positions.
+   *
+   * @param flying whether the ownship is flying, from the flight
+   * state; a takeoff starts the search for a tug
    */
-  void Process(FlarmData &flarm, const MoreData &basic) noexcept;
+  void Process(FlarmData &flarm, const MoreData &basic,
+               bool flying) noexcept;
 
 private:
   void Assess(const FlarmData &flarm, const MoreData &basic) noexcept;
+  bool IsTow(const FlarmTraffic &traffic, const ThreatGeometry &g,
+             TimeStamp clock) noexcept;
   void UpdateOwnTurnRate(const MoreData &basic) noexcept;
   void Apply(FlarmData &flarm, TimeStamp clock) const noexcept;
 };

@@ -99,7 +99,8 @@ MergeThread::ProcessUnlocked() noexcept
 
   flarm_computer.Process(device_blackboard.SetBasic().flarm,
                          last_fix.flarm, basic);
-  threat_computer.Process(device_blackboard.SetBasic().flarm, basic);
+  threat_computer.Process(device_blackboard.SetBasic().flarm, basic,
+                          device_blackboard.Calculated().flight.flying);
 
   if (!device_blackboard.Calculated().flight.flying)
     ClearGroundAlarms(device_blackboard.SetBasic().flarm);

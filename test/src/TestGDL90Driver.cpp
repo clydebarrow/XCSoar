@@ -920,9 +920,118 @@ TestOversizeFrameDropped() noexcept
   ok1(info.flarm.traffic.IsEmpty());
 }
 
+static std::vector<uint8_t>
+BuildHeartbeatFrame(unsigned seconds) noexcept
+{
+  uint8_t payload[6]{};
+  payload[0] = 0x01;
+  payload[1] = uint8_t(((seconds >> 16) & 0x01) << 7) | 0x01;
+  payload[2] = uint8_t(seconds & 0xff);
+  payload[3] = uint8_t((seconds >> 8) & 0xff);
+  return BuildFrame(0x00, payload, sizeof(payload));
+}
+
+/**
+ * The ownship report of OWNERSHIP_FRAME with another pressure altitude
+ * and vertical rate code.
+ */
+static std::vector<uint8_t>
+BuildOwnshipFrame(unsigned altitude_ft, uint16_t v_code) noexcept
+{
+  uint8_t payload[27];
+  std::memcpy(payload, OWNERSHIP_FRAME + 2, sizeof(payload));
+  const uint16_t alt_word = uint16_t((((altitude_ft + 1000) / 25) << 4) |
+                                     (payload[11] & 0x0f));
+  payload[10] = uint8_t(alt_word >> 8);
+  payload[11] = uint8_t(alt_word & 0xff);
+  payload[14] = uint8_t((payload[14] & 0xf0) | ((v_code >> 8) & 0x0f));
+  payload[15] = uint8_t(v_code & 0xff);
+  return BuildFrame(0x0A, payload, sizeof(payload));
+}
+
+static void
+TestOwnshipVario() noexcept
+{
+  /* the vertical rate sent: 16 * 64 fpm */
+  {
+    GDL90Device dev;
+    NMEAInfo info = MakeBlankNMEAInfo();
+    Feed(dev, info, BuildOwnshipFrame(2500, 0x010));
+    ok1(info.noncomp_vario_available);
+    ok1(between(info.noncomp_vario, 5.1, 5.3));
+  }
+
+  /* none sent: from the pressure altitude, by the heartbeat time,
+     however close together the reports arrive */
+  GDL90Device dev;
+  NMEAInfo info = MakeBlankNMEAInfo();
+  Feed(dev, info, BuildHeartbeatFrame(1000));
+  Feed(dev, info, BuildOwnshipFrame(2500, 0x800));
+  ok1(!info.noncomp_vario_available);
+
+  /* climbing 25 ft a second */
+  for (unsigned i = 1; i <= 20; i++) {
+    Feed(dev, info, BuildHeartbeatFrame(1000 + i));
+    Feed(dev, info, BuildOwnshipFrame(2500 + 25 * i, 0x800));
+    if (i == 1) {
+      ok1(info.noncomp_vario_available);
+      ok1(between(info.noncomp_vario, 1.8, 2.0));
+      /* a repeated report in the same second changes nothing */
+      Feed(dev, info, BuildOwnshipFrame(2550, 0x800));
+      ok1(between(info.noncomp_vario, 1.8, 2.0));
+    }
+  }
+  ok1(between(info.noncomp_vario, 7.4, 7.7));
+}
+
+static void
+TestTrafficOnGround() noexcept
+{
+  uint8_t payload[27]{};
+  payload[1] = 0x7C;
+  payload[2] = 0x00;
+  payload[3] = 0x01;
+  WriteBE24(payload + 4, DegreesToSemiCircles24(-28));
+  WriteBE24(payload + 7, DegreesToSemiCircles24(152));
+  payload[16] = 0xff;
+  payload[17] = 0x01;
+
+  struct Case {
+    uint8_t misc;
+    uint16_t speed_kt;
+    bool on_ground;
+  };
+  static constexpr Case cases[] = {
+    {0x01, 0, true},      /* on the ground, parked */
+    {0x09, 0, false},     /* airborne, hovering */
+    {0x01, 80, false},    /* the airborne bit not set, but flying */
+    {0x01, 0xfff, false}, /* no speed */
+  };
+
+  for (const auto &c : cases) {
+    const uint16_t alt_word = uint16_t((((2500 + 1000) / 25) << 4) | c.misc);
+    payload[10] = uint8_t(alt_word >> 8);
+    payload[11] = uint8_t(alt_word & 0xff);
+    const uint32_t vel = (uint32_t(c.speed_kt) << 12) | 0x800;
+    payload[13] = uint8_t(vel >> 16);
+    payload[14] = uint8_t(vel >> 8);
+    payload[15] = uint8_t(vel);
+
+    GDL90Device dev;
+    NMEAInfo info = MakeBlankNMEAInfo();
+    Feed(dev, info, BuildFrame(0x14, payload, sizeof(payload)));
+    const FlarmTraffic *t =
+      info.flarm.traffic.FindTraffic(FlarmId::FromValue(0x7C0001));
+    ok1(t != nullptr && t->on_ground == c.on_ground);
+  }
+}
+
 int main()
 {
-  plan_tests(94);
+  plan_tests(105);
+
+  TestOwnshipVario();
+  TestTrafficOnGround();
 
   TestBadCrcIgnored();
   TestHeartbeatTimeOfDay();

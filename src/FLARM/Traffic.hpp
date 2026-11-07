@@ -140,6 +140,12 @@ struct FlarmTraffic {
   /** Does the target have no-tracking enabled (PFLAA field 14, v8+) */
   bool no_track;
 
+  /**
+   * Did the source report the target on the ground (the GDL90
+   * air/ground state)?  Such a target raises no collision alarm.
+   */
+  bool on_ground;
+
   /** Has the geographical location been calculated yet? */
   bool location_available;
 
@@ -214,6 +220,7 @@ struct FlarmTraffic {
     rssi_available = false;
     source_received = false;
     no_track = false;
+    on_ground = false;
     absolute_location = false;
     absolute_altitude = false;
   }

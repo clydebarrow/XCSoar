@@ -23,6 +23,17 @@ static constexpr float MAX_TURN_RATE = 30;
 /* anything slower is taken as flying straight */
 static constexpr float MIN_TURN_RATE = 1.5f;
 
+/* finding the tug after takeoff, in meters and seconds: it is ahead
+   within this distance, moving with the ownship, during this time */
+static constexpr float TOW_SEARCH_TIME_S = 60;
+static constexpr float TOW_DISTANCE = 200;
+static constexpr float TOW_RELATIVE_SPEED = 10;
+static constexpr float TOW_AHEAD_COS = 0.7f; // within 45 degrees
+
+/* the tug has left once it is this far away */
+static constexpr float TOW_RELEASE_DISTANCE = 300;
+static constexpr float TOW_RELEASE_ALTITUDE = 150;
+
 /* PFLAU AlarmType of a collision alarm with an aircraft */
 static constexpr uint8_t ALARM_TYPE_AIRCRAFT = 2;
 
@@ -77,6 +88,52 @@ ThreatComputer::UpdateOwnTurnRate(const MoreData &basic) noexcept
   last_track_available = track_available;
 }
 
+bool
+ThreatComputer::IsTow(const FlarmTraffic &traffic, const ThreatGeometry &g,
+                      TimeStamp clock) noexcept
+{
+  const float distance = std::hypot(g.north, g.east);
+
+  if (tow_id.IsDefined()) {
+    if (traffic.id != tow_id)
+      return false;
+
+    if (distance <= TOW_RELEASE_DISTANCE &&
+        std::fabs(g.altitude) <= TOW_RELEASE_ALTITUDE)
+      return true;
+
+    /* released: from now on it is traffic like any other */
+    tow_id.Clear();
+    return false;
+  }
+
+  if (!tow_search_start.IsDefined())
+    return false;
+
+  if (clock < tow_search_start ||
+      FloatDuration{clock - tow_search_start}.count() > TOW_SEARCH_TIME_S) {
+    tow_search_start = TimeStamp::Undefined();
+    return false;
+  }
+
+  const float own_speed = std::hypot(g.own_velocity_north,
+                                     g.own_velocity_east);
+  if (!traffic.IsPowered() || distance > TOW_DISTANCE || distance <= 0 ||
+      own_speed <= 0 ||
+      std::hypot(g.velocity_north, g.velocity_east) > TOW_RELATIVE_SPEED)
+    return false;
+
+  /* the cosine of the angle between the ownship track and the target */
+  const float ahead = (g.north * g.own_velocity_north +
+                       g.east * g.own_velocity_east) / (distance * own_speed);
+  if (ahead < TOW_AHEAD_COS)
+    return false;
+
+  tow_id = traffic.id;
+  tow_search_start = TimeStamp::Undefined();
+  return true;
+}
+
 void
 ThreatComputer::Assess(const FlarmData &flarm, const MoreData &basic) noexcept
 {
@@ -101,6 +158,11 @@ ThreatComputer::Assess(const FlarmData &flarm, const MoreData &basic) noexcept
     if (!IsAssessable(traffic))
       continue;
 
+    /* parked or taxiing; a tug still on the runway is assessed, so it
+       is found before it lifts off */
+    if (traffic.on_ground && !tow_search_start.IsDefined())
+      continue;
+
     ThreatGeometry g{};
     g.north = float(traffic.relative_north);
     g.east = float(traffic.relative_east);
@@ -120,6 +182,9 @@ ThreatComputer::Assess(const FlarmData &flarm, const MoreData &basic) noexcept
     g.own_turn_rate = StraightIfSlow(own_turn_rate);
     /* XCSoar is mostly flown in gliders */
     g.gliders = IsGlider(traffic.type);
+
+    if (IsTow(traffic, g, basic.clock) || traffic.on_ground)
+      continue;
 
     const ThreatAssessment assessment = AssessThreat(g, settings);
     if (!assessment.alarm)
@@ -200,8 +265,18 @@ ThreatComputer::Apply(FlarmData &flarm, TimeStamp clock) const noexcept
 }
 
 void
-ThreatComputer::Process(FlarmData &flarm, const MoreData &basic) noexcept
+ThreatComputer::Process(FlarmData &flarm, const MoreData &basic,
+                        bool flying) noexcept
 {
+  if (flying && !was_flying) {
+    tow_search_start = basic.clock;
+    tow_id.Clear();
+  } else if (!flying) {
+    tow_search_start = TimeStamp::Undefined();
+    tow_id.Clear();
+  }
+  was_flying = flying;
+
   if (!basic.location_available) {
     alarms.clear();
     has_status = false;
