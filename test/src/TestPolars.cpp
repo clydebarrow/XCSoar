@@ -228,11 +228,30 @@ TestBuiltInPolarsPlausibility()
   }
 }
 
+static void
+TestFindByType()
+{
+  auto name = [](const char *type) {
+    const auto *item = PolarStore::FindByType(type);
+    return item != nullptr ? item->name : "";
+  };
+
+  ok1(StringIsEqual(name("PW6"), "PW-6"));
+  ok1(StringIsEqual(name("pw-6"), "PW-6"));
+  ok1(StringIsEqual(name("SZD55-1"), "SZD-55-1 Promyk"));
+  ok1(StringIsEqual(name("Ka6CR"), "Ka 6 CR"));
+  /* the shortest name starting with it */
+  ok1(StringIsEqual(name("KA6"), "Ka 6E"));
+  ok1(PolarStore::FindByType("") == nullptr);
+  ok1(PolarStore::FindByType("No such glider") == nullptr);
+}
+
 int main()
 try {
   unsigned num_tests = 19 + 9 + 8 +
     PolarStore::GetAll().size() * 2 + 1 +
-    /* LS-8 (15m), LS-8 (18m), default exact v_no */ 3;
+    /* LS-8 (15m), LS-8 (18m), default exact v_no */ 3 +
+    /* TestFindByType */ 7;
 
   // NOTE: Plausibility tests disabled for now since many fail
   if (0)
@@ -244,6 +263,7 @@ try {
   TestSetSinkRates();
   TestFileImport();
   TestBuiltInPolars();
+  TestFindByType();
 
   // NOTE: Plausibility tests disabled for now since many fail
   if (0)

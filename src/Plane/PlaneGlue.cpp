@@ -8,6 +8,7 @@
 #include "Profile/Map.hpp"
 #include "Polar/Polar.hpp"
 #include "Polar/PolarGlue.hpp"
+#include "Polar/PolarStore.hpp"
 #include "Computer/Settings.hpp"
 #include "system/Path.hpp"
 
@@ -106,4 +107,24 @@ PlaneGlue::Synchronize(const Plane &plane, ComputerSettings &settings,
   if (plane.max_speed > 0)
     gp.SetVMax(std::clamp(plane.max_speed,
                           gp.GetVMin() + 10, DEFAULT_MAX_SPEED));
+}
+
+void
+PlaneGlue::ApplyPolar(Plane &plane, const PolarStore::Item &item) noexcept
+{
+  plane.empty_mass = item.empty_mass;
+  plane.max_ballast = item.max_ballast;
+
+  if (item.wing_area > 0.0)
+    plane.wing_area = item.wing_area;
+
+  if (item.v_no > 0.0)
+    plane.max_speed = item.v_no;
+
+  plane.polar_shape = item.ToPolarShape();
+
+  plane.polar_name = item.name;
+
+  if (item.contest_handicap > 0)
+    plane.handicap = item.contest_handicap;
 }

@@ -64,4 +64,16 @@ GetDefault() noexcept;
 std::span<const Item>
 GetAll() noexcept;
 
+/**
+ * The polar of a glider type as people write it, such as "PW6" for
+ * "PW-6" or "SZD55-1" for "SZD-55-1 Promyk".  Case and characters
+ * other than letters and digits are ignored; a name that matches
+ * exactly comes first, then the shortest one starting with the type.
+ *
+ * @return nullptr if no name matches
+ */
+[[gnu::pure]]
+const Item *
+FindByType(const char *type) noexcept;
+
 } // namespace PolarStore

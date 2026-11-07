@@ -6,6 +6,9 @@
 #include "Units/System.hpp"
 
 #include <cassert>
+#include <cctype>
+#include <cstring>
+#include <string>
 
 namespace PolarStore {
 
@@ -279,6 +282,45 @@ std::span<const Item>
 GetAll() noexcept
 {
   return internal_polars;
+}
+
+/**
+ * Only the letters, in upper case, and the digits of a type name
+ */
+static std::string
+NormalizeType(const char *name) noexcept
+{
+  std::string result;
+  for (const char *p = name; *p != 0; ++p) {
+    const unsigned char ch = *p;
+    if (std::isalnum(ch))
+      result.push_back(char(std::toupper(ch)));
+  }
+  return result;
+}
+
+const Item *
+FindByType(const char *type) noexcept
+{
+  const std::string wanted = NormalizeType(type);
+  if (wanted.empty())
+    return nullptr;
+
+  const Item *best = nullptr;
+  std::size_t best_length = 0;
+  for (const auto &item : internal_polars) {
+    const std::string name = NormalizeType(item.name);
+    if (name == wanted)
+      return &item;
+
+    if (name.starts_with(wanted) &&
+        (best == nullptr || name.size() < best_length)) {
+      best = &item;
+      best_length = name.size();
+    }
+  }
+
+  return best;
 }
 
 } // namespace PolarStore
