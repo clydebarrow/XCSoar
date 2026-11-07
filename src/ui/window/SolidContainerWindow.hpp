@@ -43,6 +43,10 @@ public:
     Invalidate();
   }
 
+  bool PaintsBackground() const noexcept override {
+    return true;
+  }
+
 protected:
   /* virtual methods from class PaintWindow */
   void OnPaint(Canvas &canvas) noexcept override;

@@ -263,8 +263,12 @@ ListControl::SetItemHeight(unsigned _item_height) noexcept
 void
 ListControl::SetLength(unsigned n) noexcept
 {
-  if (n == length)
+  if (n == length) {
+    /* the items may have changed: callers set the length after
+       updating them */
+    Invalidate();
     return;
+  }
 
   unsigned cursor = GetCursorIndex();
 

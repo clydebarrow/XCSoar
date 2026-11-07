@@ -180,6 +180,14 @@ TopWindow::InvalidateDescendant([[maybe_unused]] const Window &child,
   if (invalidate_all)
     return;
 
+  /* a window that leaves part of itself unpainted is repainted with
+     the nearest ancestor that paints all of itself */
+  while (descendant != nullptr && !descendant->PaintsBackground()) {
+    descendant = descendant->GetParent();
+    if (descendant == this)
+      descendant = nullptr;
+  }
+
   if (descendant == nullptr || invalid_windows.full())
     invalidate_all = true;
   else if (!invalid_windows.contains(descendant))
