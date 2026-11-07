@@ -369,6 +369,29 @@ ToFlarmAircraftType(uint8_t emitter_category) noexcept
   }
 }
 
+/**
+ * The year this was built, from __DATE__ ("Mmm dd yyyy")
+ */
+static constexpr unsigned
+BuildYear() noexcept
+{
+  constexpr const char *date = __DATE__;
+  return (date[7] - '0') * 1000 + (date[8] - '0') * 100 +
+    (date[9] - '0') * 10 + (date[10] - '0');
+}
+
+/**
+ * Is the system clock's date one to trust?  A clock that was never
+ * set, or a real-time clock that lost its time, gives dates such as
+ * 1970-01-01 or 2070-01-01, which would date the flight.
+ */
+static bool
+IsSystemDatePlausible(const BrokenDateTime &now) noexcept
+{
+  return now.IsDatePlausible() && now.year + 1 >= BuildYear() &&
+    now.year <= BuildYear() + 20;
+}
+
 void
 GDL90Device::ParseHeartbeat(std::span<const uint8_t> payload,
                             NMEAInfo &info) noexcept
@@ -401,7 +424,7 @@ GDL90Device::ParseHeartbeat(std::span<const uint8_t> payload,
   /* Heartbeat ICD §3.1 carries TOD only; optional host UTC calendar. */
   if (gdl90_settings.use_system_utc_date) {
     const BrokenDateTime now = BrokenDateTime::NowUTC();
-    if (now.IsDatePlausible())
+    if (IsSystemDatePlausible(now))
       info.ProvideDate(now);
   }
 }
