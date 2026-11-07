@@ -37,6 +37,15 @@ public:
     buffered.Flush();
   }
 
+  /**
+   * Flush and write the file to the storage, so that a power loss
+   * keeps what was logged so far.  Throws on error.
+   */
+  void Sync() {
+    buffered.Flush();
+    file.Sync();
+  }
+
   void Sign();
 
 private:
