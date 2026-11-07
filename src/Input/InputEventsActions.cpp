@@ -26,6 +26,7 @@ https://xcsoar.readthedocs.io/en/latest/input_events.html
 */
 
 #include "InputEvents.hpp"
+#include "LogFile.hpp"
 #include "Protection.hpp"
 #include "UIState.hpp"
 #include "Computer/Settings.hpp"
@@ -430,11 +431,14 @@ InputEvents::eventPlaySound(const char *misc)
 void
 InputEvents::eventAutoLogger(const char *misc)
 {
-  if (is_simulator())
-    return;
-
   LoggerSettings::AutoLogger auto_logger =
     CommonInterface::GetComputerSettings().logger.auto_logger;
+
+  LogFormat("Auto logger %s: setting %u%s", misc, unsigned(auto_logger),
+            is_simulator() ? ", simulator" : "");
+
+  if (is_simulator())
+    return;
 
   if (auto_logger == LoggerSettings::AutoLogger::OFF)
     return;

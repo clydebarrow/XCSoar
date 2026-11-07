@@ -11,6 +11,7 @@
 #include "Engine/Task/Ordered/OrderedTask.hpp"
 #include "Computer/Settings.hpp"
 #include "Interface.hpp"
+#include "LogFile.hpp"
 #include "Simulator.hpp"
 #include "Components.hpp"
 #include "BackendComponents.hpp"
@@ -106,8 +107,11 @@ Logger::GUIStartLogger(const NMEAInfo& gps_info,
                        const ProtectedTaskManager *protected_task_manager,
                     bool noAsk)
 {
-  if (IsLoggerActive() || gps_info.gps.replay)
+  if (IsLoggerActive() || gps_info.gps.replay) {
+    LogFormat("Logger not started: %s",
+              IsLoggerActive() ? "already running" : "replay");
     return;
+  }
 
   auto task = protected_task_manager != nullptr
     ? protected_task_manager->TaskClone()

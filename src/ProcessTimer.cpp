@@ -28,6 +28,8 @@
 #include "LogFile.hpp"
 #include "Session/SessionState.hpp"
 #include "Engine/Task/TaskType.hpp"
+#include "Engine/GlideSolvers/GlidePolar.hpp"
+#include "Formatter/TimeFormatter.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -276,9 +278,56 @@ DarkModeProcessTimer() noexcept
 
 #endif
 
+/**
+ * Write the flight state to the log file: the GPS fix coming and
+ * going, takeoff and landing, and once a minute while the aircraft
+ * moves without being taken as flying, the speeds compared, so that a
+ * flight without an IGC file can be explained afterwards.
+ */
+static void
+FlightStateLogTimer() noexcept
+{
+  static bool last_fix = false;
+  static bool last_flying = false;
+  static PeriodClock moving_clock;
+
+  const auto &basic = CommonInterface::Basic();
+  const auto &calculated = CommonInterface::Calculated();
+
+  const bool fix = basic.location_available && basic.time_available;
+  if (fix != last_fix) {
+    last_fix = fix;
+    LogFormat("GPS fix %s", fix ? "acquired" : "lost");
+  }
+
+  const bool flying = calculated.flight.flying;
+  if (flying != last_flying) {
+    last_flying = flying;
+    LogFormat("%s detected, ground speed %.1f m/s",
+              flying ? "Takeoff" : "Landing",
+              basic.ground_speed_available ? double(basic.ground_speed) : -1.);
+    return;
+  }
+
+  if (flying || !basic.ground_speed_available || basic.ground_speed < 5 ||
+      !moving_clock.CheckUpdate(std::chrono::minutes(1)))
+    return;
+
+  const auto &polar =
+    CommonInterface::GetComputerSettings().polar.glide_polar_task;
+  LogFormat("Moving but not flying: ground speed %.1f m/s, takeoff speed "
+            "%.1f m/s, time %s, location %s",
+            double(basic.ground_speed),
+            polar.IsValid() ? polar.GetVTakeoff() : 10.,
+            basic.time_available ? "yes" : "no",
+            basic.location_available ? "yes" : "no");
+}
+
 static void
 CommonProcessTimer() noexcept
 {
+  FlightStateLogTimer();
+
   BlackboardProcessTimer();
 
   SettingsProcessTimer();

@@ -18,6 +18,12 @@
 
 #include <cwchar>
 
+#ifdef ESP_PLATFORM
+#include <algorithm>
+#include <string>
+#include <vector>
+#endif
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <windef.h> // for MAX_PATH
@@ -25,6 +31,59 @@
 #ifdef ANDROID
 #include <android/log.h>
 #include <fcntl.h>
+#endif
+
+#ifdef ESP_PLATFORM
+
+/**
+ * How many earlier logs are kept, as "xcsoar-YYYYMMDD-HHMMSS.log"
+ */
+static constexpr std::size_t MAX_OLD_LOGS = 10;
+
+/**
+ * Keep the log of the last run, named after the time it was last
+ * written to, so that the log of a flight survives the restarts after
+ * it; delete all but the newest #MAX_OLD_LOGS.
+ */
+static void
+ArchiveLog(Path path) noexcept
+{
+  if (!File::Exists(path))
+    return;
+
+  const BrokenDateTime t{File::GetLastModification(path)};
+  const auto name = fmt::format("xcsoar-{:04}{:02}{:02}-{:02}{:02}{:02}",
+                                t.year, t.month, t.day,
+                                t.hour, t.minute, t.second);
+  auto archived = LocalPath(fmt::format("{}.log", name).c_str());
+  for (unsigned n = 2; File::Exists(archived) && n < 100; ++n)
+    archived = LocalPath(fmt::format("{}-{}.log", name, n).c_str());
+  File::Replace(path, archived);
+
+  struct Collector final : File::Visitor {
+    std::vector<std::string> names;
+
+    void Visit([[maybe_unused]] Path full, Path filename) override {
+      names.emplace_back(filename.c_str());
+    }
+  } collector;
+
+  try {
+    Directory::VisitSpecificFiles(LocalPath(""), "xcsoar-[0-9]*.log", collector);
+  } catch (...) {
+    return;
+  }
+
+  /* the names sort by time, oldest first */
+  auto &names = collector.names;
+  if (names.size() <= MAX_OLD_LOGS)
+    return;
+
+  std::sort(names.begin(), names.end());
+  for (std::size_t i = 0; i + MAX_OLD_LOGS < names.size(); ++i)
+    File::Delete(LocalPath(names[i].c_str()));
+}
+
 #endif
 
 static FileOutputStream
@@ -41,7 +100,11 @@ OpenLog()
 
     path = LocalPath("xcsoar.log");
 
+#ifdef ESP_PLATFORM
+    ArchiveLog(path);
+#else
     File::Replace(path, LocalPath("xcsoar-old.log"));
+#endif
 
 #ifdef ANDROID
     /* redirect stdout/stderr to xcsoar-startup.log on Android so we
