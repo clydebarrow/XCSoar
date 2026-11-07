@@ -8,6 +8,7 @@
 #include "NMEA/Info.hpp"
 #include "NMEA/Checksum.hpp"
 #include "NMEA/InputLine.hpp"
+#include "time/BrokenDateTime.hpp"
 #include "Units/System.hpp"
 #include "Driver/FLARM/StaticParser.hpp"
 #include "util/CharUtil.hxx"
@@ -354,6 +355,33 @@ NMEAParser::GLL(NMEAInputLine &line, NMEAInfo &info)
   return true;
 }
 
+/**
+ * Receivers with the GPS week number rollover bug report a date 1024
+ * weeks (about 19.6 years) early.  Move a date forward by that when
+ * this brings it close to the system clock; a date from an old log
+ * being replayed stays as it is.
+ */
+static BrokenDate
+FixWeekRollover(const BrokenDate date) noexcept
+{
+  const auto now = BrokenDateTime::NowUTC();
+  if (!now.IsDatePlausible())
+    return date;
+
+  static constexpr std::chrono::hours rollover{24 * 7 * 1024};
+  static constexpr std::chrono::hours tolerance{24 * 30};
+
+  const BrokenDateTime t{date, BrokenTime::Midnight()};
+  for (unsigned n = 1; n <= 2; ++n) {
+    const auto moved = t + rollover * n;
+    const auto difference = moved - now;
+    if (difference < tolerance && difference > -tolerance)
+      return moved.GetDate();
+  }
+
+  return date;
+}
+
 bool
 NMEAParser::ReadDate(NMEAInputLine &line, BrokenDate &date)
 {
@@ -377,7 +405,7 @@ NMEAParser::ReadDate(NMEAInputLine &line, BrokenDate &date)
   if (!new_value.IsPlausible())
     return false;
 
-  date = new_value;
+  date = FixWeekRollover(new_value);
   return true;
 }
 

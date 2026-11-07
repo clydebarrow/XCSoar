@@ -139,6 +139,33 @@ MakeTestDriverDataPath() noexcept
  * Unit tests
  */
 
+/**
+ * A receiver with the GPS week rollover bug reports today's date 1024
+ * weeks early: it is moved to today.
+ */
+static void
+TestWeekRollover()
+{
+  const auto now = BrokenDateTime::NowUTC();
+  const auto early = (BrokenDateTime{now.GetDate(), BrokenTime::Midnight()} -
+                      std::chrono::hours(24 * 7 * 1024)).GetDate();
+
+  const auto body = fmt::format("GPRMC,082311,A,5103.5403,N,00741.5742,E,"
+                                "055.3,022.4,{:02}{:02}{:02},000.3,W",
+                                early.day, early.month, early.year % 100);
+  const auto line = fmt::format("${}*{:02X}", body,
+                                unsigned(NMEAChecksum(body)));
+
+  NMEAParser parser;
+  NMEAInfo nmea_info;
+  nmea_info.Reset();
+  nmea_info.clock = TimeStamp{FloatDuration{1}};
+  nmea_info.alive.Update(nmea_info.clock);
+
+  ok1(parser.ParseLine(line.c_str(), nmea_info));
+  ok1(nmea_info.date_time_utc.GetDate() == now.GetDate());
+}
+
 static void
 TestGeneric()
 {
@@ -4695,7 +4722,7 @@ int main()
   SetSingleDataPath(data_path);
   CreateDataPath();
 
-  plan_tests(1099 /* drivers */ + 45 /* PFLAU extended */
+  plan_tests(1099 /* drivers */ + 2 /* week rollover */ + 45 /* PFLAU extended */
              + 40 /* PFLAA v7+ */ + 4 /* PFLAA high speed */
              + 12 /* PFLAE */ + 10 /* PFLAJ */
              + 16 /* PFLAQ */
@@ -4722,6 +4749,7 @@ int main()
              + 25 /* LXNAVQNHModel */
              + 6 /* LXNAVQNHEcho */);
   TestGeneric();
+  TestWeekRollover();
   TestTasman();
   TestLK8EX1();
   TestFLARM();
