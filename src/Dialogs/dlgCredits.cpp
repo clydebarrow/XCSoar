@@ -14,13 +14,17 @@
 #include "UIGlobals.hpp"
 #include "Language/Language.hpp"
 
+#include <string>
+
 extern "C"
 {
   extern const uint8_t COPYING_gz[];
   extern const size_t COPYING_gz_size;
 
+#ifndef ESP_PLATFORM
   extern const uint8_t NEWS_txt_gz[];
   extern const size_t NEWS_txt_gz_size;
+#endif
 
   extern const uint8_t AUTHORS_gz[];
   extern const size_t AUTHORS_gz_size;
@@ -72,7 +76,13 @@ dlgCreditsShowModal([[maybe_unused]] UI::SingleWindow &parent)
   const DialogLook &look = UIGlobals::GetDialogLook();
 
   const auto authors = InflateToString(AUTHORS_gz, AUTHORS_gz_size);
+#ifdef ESP_PLATFORM
+  /* the news are not built in, to save flash */
+  const std::string news{"The news of each version are on "
+                         "https://xcsoar.org"};
+#else
   const auto news = InflateToString(NEWS_txt_gz, NEWS_txt_gz_size);
+#endif
   const auto third_party = InflateToString(THIRD_PARTY_NOTICES_txt_gz,
                                            THIRD_PARTY_NOTICES_txt_gz_size);
   const auto license = InflateToString(COPYING_gz, COPYING_gz_size);

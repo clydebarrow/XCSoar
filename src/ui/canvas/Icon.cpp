@@ -115,20 +115,41 @@ MaskedIcon::LoadResource(ResourceId id, ResourceId mdpi_id,
                          bool center)
 {
   /* pick the variant whose density bucket is nearest to the display;
-     boundaries are midway between the buckets */
+     boundaries are midway between the buckets.  A build may embed
+     only some densities (ICON_DENSITIES): then the nearest one that
+     is there is scaled. */
   const unsigned density = DisplayDensity();
 
-  unsigned source_dpi = ICON_LDPI;
-  if (density >= 400 && xxhdpi_id.IsDefined()) {
-    id = xxhdpi_id;
-    source_dpi = ICON_XXHDPI;
-  } else if (density >= 240 && xhdpi_id.IsDefined()) {
-    id = xhdpi_id;
-    source_dpi = ICON_XHDPI;
-  } else if (density >= 128 && mdpi_id.IsDefined()) {
-    id = mdpi_id;
-    source_dpi = ICON_MDPI;
+  const struct {
+    ResourceId id;
+    unsigned dpi;
+  } variants[] = {
+    {id, ICON_LDPI},
+    {mdpi_id, ICON_MDPI},
+    {xhdpi_id, ICON_XHDPI},
+    {xxhdpi_id, ICON_XXHDPI},
+  };
+  static constexpr int n_variants = 4;
+
+  const int wanted = density >= 400 ? 3
+    : density >= 240 ? 2
+    : density >= 128 ? 1
+    : 0;
+
+  int chosen = -1;
+  for (int distance = 0; chosen < 0 && distance < n_variants; ++distance) {
+    if (wanted - distance >= 0 && variants[wanted - distance].id.IsDefined())
+      chosen = wanted - distance;
+    else if (wanted + distance < n_variants &&
+             variants[wanted + distance].id.IsDefined())
+      chosen = wanted + distance;
   }
+
+  if (chosen < 0)
+    return;
+
+  id = variants[chosen].id;
+  const unsigned source_dpi = variants[chosen].dpi;
 
   const unsigned stretch =
     IconStretchFixed10(source_dpi * ICON_SUPERSAMPLE);

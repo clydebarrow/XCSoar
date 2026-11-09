@@ -41,6 +41,15 @@ idf_component_register(
   PRIV_REQUIRES vfs lwip espressif__freetype)
 
 if(NOT CMAKE_BUILD_EARLY_EXPANSION)
+  # Only the FreeType modules for TrueType fonts (freetype/xcsoar_ftmodule.h)
+  if(TARGET freetype)
+    target_include_directories(freetype PRIVATE ${CMAKE_CURRENT_LIST_DIR}/freetype)
+    target_compile_definitions(freetype PRIVATE
+      "FT_CONFIG_MODULES_H=<xcsoar_ftmodule.h>")
+  else()
+    message(WARNING "FreeType target not found: all its modules are built in")
+  endif()
+
   xcsoar_fetch_libraries()
   xcsoar_add_third_party(${COMPONENT_LIB} "idf::newlib;idf::lwip;idf::vfs")
 
@@ -63,9 +72,13 @@ if(NOT CMAKE_BUILD_EARLY_EXPANSION)
   target_compile_options(${COMPONENT_LIB} PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-std=gnu++20 -fexceptions>)
 
-  # Optimise for speed, not size: map drawing and the glide computer
-  # are CPU bound, and the application has flash to spare
-  target_compile_options(${COMPONENT_LIB} PRIVATE -O2)
+  # Optimise for size (the project's setting), except the code that
+  # draws each frame, which is CPU bound: -O2 for all of it would take
+  # about 400 kB more flash
+  set(speed_srcs ${srcs})
+  list(FILTER speed_srcs INCLUDE REGEX
+    "/src/(MapWindow|Renderer|Topography|Terrain|Projection|Geo|Math|Gauge|ui/canvas)/")
+  set_source_files_properties(${speed_srcs} PROPERTIES COMPILE_OPTIONS -O2)
 
   # The toolchain's limits.h defines LLONG_MAX for C only, but Lua's
   # headers need it in C++ too; libstdc++'s <climits> adds it

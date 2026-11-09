@@ -250,7 +250,11 @@ endif
 
 #######
 
-TEXT_FILES = AUTHORS COPYING NEWS.txt THIRD_PARTY_NOTICES.txt
+TEXT_FILES = AUTHORS COPYING THIRD_PARTY_NOTICES.txt
+ifneq ($(TARGET_IS_ESP32),y)
+# on the ESP32 the news would take 80 kB of flash
+TEXT_FILES += NEWS.txt
+endif
 
 TEXT_COMPRESSED = $(patsubst %,$(DATA)/%.gz,$(TEXT_FILES))
 $(TEXT_COMPRESSED): $(DATA)/%.gz: % | $(DATA)/dirstamp
@@ -289,6 +293,16 @@ $(TARGET_OUTPUT_DIR)/resources.txt: Data/resources.txt $(RESOURCE_FLAGS_STAMP) |
 	$(Q)mv $@.$(RANDOM_NUMBER).tmp $@
 
 RANDOM_NUMBER := $(shell od -vAn -N4 -tu4 < /dev/urandom| tr -d ' ')
+
+ifeq ($(TARGET_IS_ESP32),y)
+# Only the density of the ESP32 boards' displays (Tab5, T-Display-P4);
+# a display of another density gets these icons scaled.  The others
+# would take about 500 kB of flash.
+ICON_DENSITIES = xhdpi
+$(TARGET_OUTPUT_DIR)/include/MakeResource.hpp: export ICON_DENSITIES:=$(ICON_DENSITIES)
+$(TARGET_OUTPUT_DIR)/include/ResourceLookup_entries.cpp: export ICON_DENSITIES:=$(ICON_DENSITIES)
+$(TARGET_OUTPUT_DIR)/resources.c: export ICON_DENSITIES:=$(ICON_DENSITIES)
+endif
 
 $(TARGET_OUTPUT_DIR)/include/MakeResource.hpp: $(TARGET_OUTPUT_DIR)/resources.txt tools/GenerateMakeResource.pl | $(TARGET_OUTPUT_DIR)/include/dirstamp
 	@$(NQ)echo "  GEN     $@"
