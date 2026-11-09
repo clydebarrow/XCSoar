@@ -39,6 +39,20 @@ private:
    */
   bool geo_altitude_is_msl = false;
 
+  /**
+   * The validity of the ownship position.  The heartbeat's "GPS
+   * position valid" flag and a NIC of 0 count only once the sender has
+   * shown that it uses them, by setting the flag or sending another NIC.
+   */
+  bool heartbeat_position_valid = false;
+  bool heartbeat_position_flag_seen = false;
+  bool nic_seen = false;
+  bool ownship_position_valid = true;
+
+  bool IsHeartbeatPositionValid() const noexcept {
+    return heartbeat_position_valid || !heartbeat_position_flag_seen;
+  }
+
   /** UTC seconds since midnight of the latest heartbeat, if any */
   unsigned heartbeat_seconds = 0;
   bool heartbeat_valid = false;

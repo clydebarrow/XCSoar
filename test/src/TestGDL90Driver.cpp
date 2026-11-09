@@ -1026,9 +1026,117 @@ TestTrafficOnGround() noexcept
   }
 }
 
+/**
+ * OWNERSHIP_FRAME with another NIC, and optionally at 0,0.
+ */
+static std::vector<uint8_t>
+BuildOwnshipFrameNic(unsigned nic, bool zero_position = false) noexcept
+{
+  uint8_t payload[27];
+  std::memcpy(payload, OWNERSHIP_FRAME + 2, sizeof(payload));
+  payload[12] = uint8_t((nic << 4) | (payload[12] & 0x0f));
+  if (zero_position)
+    std::memset(payload + 4, 0, 6);
+  return BuildFrame(0x0A, payload, sizeof(payload));
+}
+
+static std::vector<uint8_t>
+BuildHeartbeatFrameGps(bool position_valid) noexcept
+{
+  uint8_t payload[6]{};
+  payload[0] = position_valid ? 0x81 : 0x01;
+  payload[1] = 0x01;
+  payload[2] = 100;
+  return BuildFrame(0x00, payload, sizeof(payload));
+}
+
+static void
+TestOwnshipPositionValidity() noexcept
+{
+  /* a NIC of 0 after a fix: the position is not used, but the
+     pressure altitude is */
+  {
+    GDL90Device dev;
+    NMEAInfo info = MakeBlankNMEAInfo();
+    Feed(dev, info, BuildOwnshipFrameNic(8));
+    ok1(info.location_available);
+
+    NMEAInfo later = MakeBlankNMEAInfo();
+    Feed(dev, later, BuildOwnshipFrameNic(0));
+    ok1(!later.location_available);
+    ok1(!later.ground_speed_available);
+    ok1(later.pressure_altitude_available);
+  }
+
+  /* a sender that always sends NIC 0 is believed */
+  {
+    GDL90Device dev;
+    NMEAInfo info = MakeBlankNMEAInfo();
+    Feed(dev, info, BuildOwnshipFrameNic(0));
+    ok1(info.location_available);
+  }
+
+  /* no fix: 0,0 */
+  {
+    GDL90Device dev;
+    NMEAInfo info = MakeBlankNMEAInfo();
+    Feed(dev, info, BuildOwnshipFrameNic(8, true));
+    ok1(!info.location_available);
+  }
+
+  /* the heartbeat's "GPS position valid" flag, once used */
+  {
+    GDL90Device dev;
+    NMEAInfo info = MakeBlankNMEAInfo();
+    Feed(dev, info, BuildHeartbeatFrameGps(true));
+    Feed(dev, info, BuildOwnshipFrameNic(8));
+    ok1(info.location_available);
+
+    NMEAInfo later = MakeBlankNMEAInfo();
+    Feed(dev, later, BuildHeartbeatFrameGps(false));
+    Feed(dev, later, BuildOwnshipFrameNic(8));
+    ok1(!later.location_available);
+  }
+}
+
+static void
+TestOwnshipGeometricAltitudeValidity() noexcept
+{
+  struct Case {
+    uint8_t vertical_high, vertical_low;
+    bool available;
+  };
+  static constexpr Case cases[] = {
+    {0x00, 0x0a, true},  /* VFOM 10 m */
+    {0x7f, 0xff, false}, /* VFOM not available */
+    {0x80, 0x0a, false}, /* vertical warning */
+  };
+
+  for (const auto &c : cases) {
+    const uint8_t payload[] = {0x03, 0xE8, c.vertical_high, c.vertical_low};
+    GDL90Device dev;
+    NMEAInfo info = MakeBlankNMEAInfo();
+    Feed(dev, info, BuildFrame(0x0b, payload, sizeof(payload)));
+    ok1(bool(info.gps_altitude_available) == c.available);
+  }
+
+  /* not with a position that is not valid */
+  GDL90Device dev;
+  NMEAInfo info = MakeBlankNMEAInfo();
+  Feed(dev, info, BuildOwnshipFrameNic(8));
+  Feed(dev, info, BuildOwnshipFrameNic(0));
+  const uint8_t payload[] = {0x03, 0xE8, 0x00, 0x0a};
+  NMEAInfo later = MakeBlankNMEAInfo();
+  Feed(dev, later, BuildFrame(0x0b, payload, sizeof(payload)));
+  ok1(!later.gps_altitude_available);
+}
+
 int main()
 {
-  plan_tests(105);
+  plan_tests(105 + 8 + 4);
+
+  TestOwnshipPositionValidity();
+  TestOwnshipGeometricAltitudeValidity();
 
   TestOwnshipVario();
   TestTrafficOnGround();

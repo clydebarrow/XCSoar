@@ -84,6 +84,11 @@ static constexpr uint16_t GDL90_ALT_WORD_MISC_MASK = 0x0f;
 /* Ownship Geometric Altitude (ICD §3.6): int16, 5 ft per LSB */
 static constexpr int GDL90_GEOM_ALT_FT_RESOLUTION = 5;
 static constexpr std::size_t GDL90_GEOM_ALT_PAYLOAD_BYTES = 4;
+static constexpr uint16_t GDL90_GEOM_ALT_WARNING = 0x8000;
+static constexpr uint16_t GDL90_GEOM_ALT_VFOM_MASK = 0x7fff;
+static constexpr uint16_t GDL90_GEOM_ALT_VFOM_UNKNOWN = 0x7fff;
+/* Heartbeat status byte 1, bit 7 (ICD §3.1.1) */
+static constexpr uint8_t GDL90_HEARTBEAT_GPS_POS_VALID_MASK = 0x80;
 
 static constexpr double GDL90_LAT_MIN_DEG = -90;
 static constexpr double GDL90_LAT_MAX_DEG = 90;
@@ -402,6 +407,11 @@ GDL90Device::ParseHeartbeat(std::span<const uint8_t> payload,
   if (payload.size() < GDL90_HEARTBEAT_MIN_PAYLOAD)
     return;
 
+  heartbeat_position_valid =
+    (payload[0] & GDL90_HEARTBEAT_GPS_POS_VALID_MASK) != 0;
+  if (heartbeat_position_valid)
+    heartbeat_position_flag_seen = true;
+
   const uint8_t status2 = payload[1];
   if ((status2 & GDL90_HEARTBEAT_UTC_VALID_MASK) == 0)
     return;
@@ -437,19 +447,6 @@ GDL90Device::ParseOwnshipReport(std::span<const uint8_t> payload,
   if (payload.size() < GDL90_REPORT_PAYLOAD_BYTES)
     return;
 
-  const int32_t lat_raw = SignExtend24(ReadBE24(payload, 4));
-  const int32_t lon_raw = SignExtend24(ReadBE24(payload, 7));
-  const double lat_deg = SemiCircles24ToDegrees(lat_raw);
-  const double lon_deg = SemiCircles24ToDegrees(lon_raw);
-
-  if (!std::isfinite(lat_deg) || !std::isfinite(lon_deg) ||
-      lat_deg < GDL90_LAT_MIN_DEG || lat_deg > GDL90_LAT_MAX_DEG ||
-      lon_deg < GDL90_LON_MIN_DEG || lon_deg > GDL90_LON_MAX_DEG)
-    return;
-
-  info.location = GeoPoint(Angle::Degrees(lon_deg), Angle::Degrees(lat_deg));
-  info.location_available.Update(info.clock);
-
   /* Altitude word: bits 15–4 = pressure altitude code; bits 3–0 = misc
      (track-valid flags in low 2 bits per ICD §3.5.1). */
   const uint16_t alt_word = ReadBE16(payload, 10);
@@ -470,6 +467,36 @@ GDL90Device::ParseOwnshipReport(std::span<const uint8_t> payload,
   const uint32_t vel = ReadBE24(payload, 13);
   ProvideOwnshipVario(uint16_t(vel & GDL90_VEL_VERTICAL_MASK),
                       pressure_altitude_valid, pressure_altitude, info);
+
+  const int32_t lat_raw = SignExtend24(ReadBE24(payload, 4));
+  const int32_t lon_raw = SignExtend24(ReadBE24(payload, 7));
+  const double lat_deg = SemiCircles24ToDegrees(lat_raw);
+  const double lon_deg = SemiCircles24ToDegrees(lon_raw);
+
+  /* NIC, the high nibble of byte 12 (ICD §3.5.1.6): 0 is a position of
+     unknown integrity, as a receiver without a fix sends.  It counts
+     only from a sender that has sent another value, in case one leaves
+     it at 0 */
+  const unsigned nic = payload[12] >> 4;
+  if (nic != 0)
+    nic_seen = true;
+
+  ownship_position_valid =
+    std::isfinite(lat_deg) && std::isfinite(lon_deg) &&
+    lat_deg >= GDL90_LAT_MIN_DEG && lat_deg <= GDL90_LAT_MAX_DEG &&
+    lon_deg >= GDL90_LON_MIN_DEG && lon_deg <= GDL90_LON_MAX_DEG &&
+    /* no fix: 0,0 */
+    (lat_raw != 0 || lon_raw != 0) &&
+    (nic != 0 || !nic_seen) &&
+    IsHeartbeatPositionValid();
+
+  /* without it, another GPS gives the position, track and speed */
+  if (!ownship_position_valid)
+    return;
+
+  info.location = GeoPoint(Angle::Degrees(lon_deg), Angle::Degrees(lat_deg));
+  info.location_available.Update(info.clock);
+
   const uint16_t h_code = uint16_t((vel >> GDL90_VEL_HORIZONTAL_SHIFT) &
                                     GDL90_VEL_HORIZONTAL_MASK);
   if (h_code != GDL90_VEL_HORIZONTAL_INVALID) {
@@ -553,6 +580,14 @@ GDL90Device::ParseOwnshipGeometricAltitude(std::span<const uint8_t> payload,
 {
   /* Ownship Geometric Altitude (ICD §3.6): int16, 5 ft per LSB */
   if (payload.size() < GDL90_GEOM_ALT_PAYLOAD_BYTES)
+    return;
+
+  /* Vertical metrics: bit 15 is the vertical warning, the rest the
+     vertical figure of merit, 0x7FFF when not available */
+  const uint16_t vertical = ReadBE16(payload, 2);
+  if ((vertical & GDL90_GEOM_ALT_WARNING) != 0 ||
+      (vertical & GDL90_GEOM_ALT_VFOM_MASK) == GDL90_GEOM_ALT_VFOM_UNKNOWN ||
+      !ownship_position_valid || !IsHeartbeatPositionValid())
     return;
 
   const int16_t alt5 = int16_t(ReadBE16(payload, 0));
