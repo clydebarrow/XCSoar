@@ -12,11 +12,49 @@
 
 #include <cassert>
 
+IGCWriter::ReopeningFile::ReopeningFile(Path _path)
+  :path(_path)
+{
+  file.emplace(path,
+               /* we use CREATE_VISIBLE here so the user can recover
+                  partial IGC files after a crash/battery
+                  failure/etc. */
+               FileOutputStream::Mode::CREATE_VISIBLE);
+}
+
+FileOutputStream &
+IGCWriter::ReopeningFile::Open()
+{
+  if (!file)
+    file.emplace(path, FileOutputStream::Mode::APPEND_OR_CREATE);
+  return *file;
+}
+
+void
+IGCWriter::ReopeningFile::Write(std::span<const std::byte> src)
+{
+  try {
+    Open().Write(src);
+  } catch (...) {
+    /* closed without deleting it; the next write opens it again */
+    file.reset();
+    throw;
+  }
+}
+
+void
+IGCWriter::ReopeningFile::Sync()
+{
+  try {
+    Open().Sync();
+  } catch (...) {
+    file.reset();
+    throw;
+  }
+}
+
 IGCWriter::IGCWriter(Path path)
-  :file(path,
-        /* we use CREATE_VISIBLE here so the user can recover partial
-           IGC files after a crash/battery failure/etc. */
-        FileOutputStream::Mode::CREATE_VISIBLE),
+  :file(path),
    buffered(file)
 {
   fix.Clear();

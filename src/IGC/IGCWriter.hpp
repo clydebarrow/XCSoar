@@ -7,8 +7,10 @@
 #include "IGCFix.hpp"
 #include "io/FileOutputStream.hxx"
 #include "io/BufferedOutputStream.hxx"
+#include "system/Path.hpp"
 
 #include <array>
+#include <optional>
 #include <string_view>
 
 class Path;
@@ -18,7 +20,32 @@ struct NMEAInfo;
 struct GeoPoint;
 
 class IGCWriter {
-  FileOutputStream file;
+  /**
+   * The IGC file, opened again for appending after a write fails:
+   * the FAT file system on the ESP32 fails every operation on an open
+   * file after one I/O error, until the file is closed, so a single
+   * SD card error would otherwise end the log.  Data that failed to
+   * be written stays in #buffered and is written again.
+   */
+  class ReopeningFile final : public OutputStream {
+    AllocatedPath path;
+    std::optional<FileOutputStream> file;
+
+  public:
+    explicit ReopeningFile(Path _path);
+
+    void Write(std::span<const std::byte> src) override;
+
+    /**
+     * Write the file to the storage.  Throws on error.
+     */
+    void Sync();
+
+  private:
+    FileOutputStream &Open();
+  };
+
+  ReopeningFile file;
   BufferedOutputStream buffered;
 
   GRecord grecord;
