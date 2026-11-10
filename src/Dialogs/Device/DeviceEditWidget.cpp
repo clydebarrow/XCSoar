@@ -15,6 +15,11 @@
 #include "Device/Driver.hpp"
 #include "Interface.hpp"
 
+#ifdef ESP_PLATFORM
+#include "Device/Port/HostPort.hpp"
+#include "util/StringAPI.hxx"
+#endif
+
 enum ControlIndex {
   Port, EngineTypes, BaudRate, BulkBaudRate,
   IP_ADDRESS,
@@ -662,6 +667,17 @@ DeviceEditWidget::OnModified(DataField &df) noexcept
       config.ApplySpectateDefaults();
       LoadValue(SpectatePath, config.path);
     }
+
+#ifdef ESP_PLATFORM
+    /* a stream needs its own driver, e.g. GDL90 for the SkyEcho's
+       binary data, which the default Generic NMEA driver can't read */
+    if (type == DeviceConfig::PortType::HOST) {
+      const char *name = ((const DataFieldEnum &)df).GetAsString();
+      for (const auto &stream : HostPort::GetStreams())
+        if (StringIsEqual(stream.name, name) && stream.driver != nullptr)
+          LoadValueEnum(Driver, stream.driver);
+    }
+#endif
   }
 
   if (IsDataField(Port, df) || IsDataField(Driver, df) ||
