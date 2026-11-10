@@ -110,6 +110,13 @@ public:
   [[nodiscard]]
   std::vector<Path> GetAllPaths() const noexcept;
 
+  /**
+   * The highlighted file; nullptr when it is a directory or the list
+   * is empty.
+   */
+  [[nodiscard]]
+  Path GetCursorPath() const noexcept;
+
   void Refresh() noexcept;
 
   /** Repaint visible rows without reloading files or changing list state. */

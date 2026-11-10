@@ -44,6 +44,7 @@ https://xcsoar.readthedocs.io/en/latest/input_events.html
 #include "Dialogs/Plane/PlaneDialogs.hpp"
 #include "Dialogs/DataManagement/DataManagement.hpp"
 #include "Dialogs/DataManagement/ExportFlightsPanel.hpp"
+#include "FlightTrackActions.hpp"
 #include "Dialogs/ProfileListDialog.hpp"
 #include "Dialogs/dlgAnalysis.hpp"
 #include "Dialogs/FileManager.hpp"
@@ -811,6 +812,18 @@ void
 InputEvents::eventExportFlights([[maybe_unused]] const char *misc)
 {
   ShowExportFlightsDialog();
+}
+
+// FlightTrack
+// show: choose a logged flight and show its track on the map
+// hide: remove the track from the map
+void
+InputEvents::eventFlightTrack(const char *misc)
+{
+  if (StringIsEqual(misc, "hide"))
+    HideFlightTrack();
+  else
+    ShowExportFlightsDialog(ExportFlightsMode::TRACK);
 }
 
 void

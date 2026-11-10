@@ -283,6 +283,9 @@ MapWindow::Render(Canvas &canvas, const PixelRect &rc) noexcept
   DrawWaypoints(canvas);
 
   //////////////////////////////////////////////// aircraft level items
+  draw_sw.Mark("RenderFlightTrack");
+  RenderFlightTrack(canvas);
+
   // Render the snail trail
   RenderTrail(canvas, aircraft_pos);
 

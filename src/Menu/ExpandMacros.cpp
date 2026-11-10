@@ -25,6 +25,7 @@
 #include "util/Macros.hpp"
 #include "net/http/Features.hpp"
 #include "UIState.hpp"
+#include "FlightTrackActions.hpp"
 
 #include <stdlib.h>
 
@@ -343,6 +344,9 @@ LookupMacro(std::string_view name, bool &invalid) noexcept
   } else if (name == "CheckReplay") {
     invalid |= CommonInterface::MovementDetected();
     return nullptr;
+  } else if (name == "HideFlightTrack") {
+    /* the button is only shown while a track is on the map */
+    return IsFlightTrackShown() ? _("Hide track") : "";
   } else if (name == "CheckWaypointFile") {
     invalid |= data_components->waypoints->IsEmpty();
     return nullptr;

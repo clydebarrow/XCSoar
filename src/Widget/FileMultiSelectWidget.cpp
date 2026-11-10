@@ -231,6 +231,19 @@ FileMultiSelectWidget::GetAllPaths() const noexcept
   return result;
 }
 
+Path
+FileMultiSelectWidget::GetCursorPath() const noexcept
+{
+  if (!IsDefined() || GetList().IsEmpty())
+    return nullptr;
+
+  const unsigned index = GetList().GetCursorIndex();
+  if (index >= items_.size() || items_[index].is_dir)
+    return nullptr;
+
+  return items_[index].path;
+}
+
 void
 FileMultiSelectWidget::ShowHelp() noexcept
 {

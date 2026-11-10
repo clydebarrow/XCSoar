@@ -29,6 +29,7 @@ DIALOG_SOURCES = \
 	$(SRC)/io/TarBackup.cpp \
 	$(SRC)/io/BackupPaths.cpp \
 	$(SRC)/IGC/FlightTimes.cpp \
+	$(SRC)/IGC/FlightTrack.cpp \
 	$(SRC)/IGC/IgcMetaCache.cpp \
 	$(SRC)/Dialogs/Device/PortDataField.cpp \
 	$(SRC)/Dialogs/Device/PortPicker.cpp \
@@ -348,6 +349,7 @@ XCSOAR_SOURCES := \
 	$(SRC)/Menu/ExpandMacros.cpp \
 	$(SRC)/Menu/ShowButton.cpp \
 	$(SRC)/Pan.cpp \
+	$(SRC)/FlightTrackActions.cpp \
 	$(SRC)/Input/InputConfig.cpp \
 	$(SRC)/Input/InputDefaults.cpp \
 	$(SRC)/Input/InputEvents.cpp \
@@ -406,6 +408,7 @@ XCSOAR_SOURCES := \
 	$(SRC)/Renderer/TurnBackMarkerRenderer.cpp \
 	$(SRC)/Renderer/TrafficRenderer.cpp \
 	$(SRC)/Renderer/TrailRenderer.cpp \
+	$(SRC)/Renderer/FlightTrackRenderer.cpp \
 	$(SRC)/Renderer/UnitSymbolRenderer.cpp \
 	$(SRC)/Renderer/WaypointListRenderer.cpp \
 	$(SRC)/Renderer/WaypointIconRenderer.cpp \

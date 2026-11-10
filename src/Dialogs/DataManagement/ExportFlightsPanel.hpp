@@ -5,10 +5,14 @@
 
 #include "system/Path.hpp"
 
-/** Export lists IGC and NMEA logs. WeGlide lists IGC files for upload. */
+/**
+ * Export lists IGC and NMEA logs. WeGlide lists IGC files for upload.
+ * Track lists IGC files to show one's track on the map.
+ */
 enum class ExportFlightsMode {
   EXPORT,
   WEGLIDE,
+  TRACK,
 };
 
 /** Result of the Replay file list. FILE copies the chosen path. */

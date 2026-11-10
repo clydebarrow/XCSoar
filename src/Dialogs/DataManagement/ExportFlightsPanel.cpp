@@ -31,6 +31,7 @@
 #include "ui/event/Notify.hpp"
 #include "ui/event/DelayedNotify.hpp"
 #include "LogFile.hpp"
+#include "FlightTrackActions.hpp"
 
 #ifdef ANDROID
 #include "Android/Main.hpp"
@@ -156,6 +157,30 @@ static const char *
 GetIgcMetadata(const FileMultiSelectWidget::FileItem &it) noexcept
 {
   return igc_cache.GetCompactInfoPtr(it.path);
+}
+
+/**
+ * Remember the highlighted flight in #chosen and close #dialog; its
+ * track is shown once the dialog is closed.
+ */
+static void
+ChooseHighlightedTrack(FileMultiSelectWidget &files, WidgetDialog &dialog,
+                       AllocatedPath &chosen)
+{
+  const Path path = files.GetCursorPath();
+  if (path == nullptr) {
+    ShowNeedFlightSelection();
+    return;
+  }
+
+  if (!path.EndsWithIgnoreCase(".igc")) {
+    ShowMessageBox(_("Only the track of an .igc file can be shown."),
+                   _("Show track"), MB_OK | MB_ICONINFORMATION);
+    return;
+  }
+
+  chosen = AllocatedPath(path);
+  dialog.SetModalResult(mrOK);
 }
 
 static void
@@ -575,19 +600,25 @@ void
 ShowExportFlightsDialog(ExportFlightsMode mode)
 {
   const bool weglide = mode == ExportFlightsMode::WEGLIDE;
+  const bool track = mode == ExportFlightsMode::TRACK;
   const DialogLook &look = UIGlobals::GetDialogLook();
 
   WidgetDialog dialog(WidgetDialog::Full{}, UIGlobals::GetMainWindow(),
                       look, weglide
                       ? _("WeGlide Upload")
+                      : track
+                      ? C_("Menu", "Flights")
                       : C_("Menu", "Export flights"));
 
-  auto df = ScanLogs(weglide);
-  auto container = std::make_unique<FlightContainer>(*df, weglide);
+  auto df = ScanLogs(weglide || track);
+  auto container = std::make_unique<FlightContainer>(*df, weglide || track);
   FlightContainer &flight_container = *container;
   FileMultiSelectWidget &file_list = *flight_container.file_list;
 
-  if (!weglide) {
+  /* the flight whose track is shown after the dialog closes */
+  AllocatedPath track_path;
+
+  if (!weglide && !track) {
     const AllocatedPath &last = GetLastStorageTarget();
     if (last != nullptr)
       flight_container.SetTargetDevice(Path(last));
@@ -602,6 +633,21 @@ ShowExportFlightsDialog(ExportFlightsMode mode)
       UseHighlightedFlight(file_list);
     });
     dialog.AddButton(_("Cancel"), mrCancel);
+  } else if (track) {
+    /* the newest flight is first and highlighted */
+    file_list.SetShowCheckmarks(false);
+    file_list.SetFileActivateCallback([&](Path) {
+      ChooseHighlightedTrack(file_list, dialog, track_path);
+    });
+    dialog.AddButton(_("Show track"), [&]() {
+      ChooseHighlightedTrack(file_list, dialog, track_path);
+    });
+    if (IsFlightTrackShown())
+      dialog.AddButton(_("Hide track"), [&dialog]() {
+        HideFlightTrack();
+        dialog.SetModalResult(mrOK);
+      });
+    dialog.AddButton(_("Close"), mrCancel);
   } else {
     dialog.AddButton(C_("Button", "Choose location"), [&flight_container]() {
       PickStorageLocationAndApply([&flight_container](AllocatedPath chosen) {
@@ -620,6 +666,9 @@ ShowExportFlightsDialog(ExportFlightsMode mode)
     dialog.AddButton(C_("Button", "Export"), [&file_list]() {
       PerformExport(&file_list);
     });
+    dialog.AddButton(_("Show track"), [&]() {
+      ChooseHighlightedTrack(file_list, dialog, track_path);
+    });
     dialog.AddButton(C_("Button", "Select all"), [&file_list]() {
       file_list.SelectAll();
     });
@@ -631,6 +680,9 @@ ShowExportFlightsDialog(ExportFlightsMode mode)
 
   dialog.FinishPreliminary(std::move(container));
   dialog.ShowModal();
+
+  if (track_path != nullptr)
+    ShowFlightTrack(track_path);
 }
 
 ReplayFlightChoice

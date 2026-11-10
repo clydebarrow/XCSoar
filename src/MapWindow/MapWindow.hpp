@@ -16,6 +16,7 @@
 #include "Renderer/BackgroundRenderer.hpp"
 #include "Renderer/WaypointRenderer.hpp"
 #include "Renderer/TrailRenderer.hpp"
+#include "Renderer/FlightTrackRenderer.hpp"
 #include "Renderer/TurnBackMarkerRenderer.hpp"
 #include "OverlayLimits.hpp"
 #include "Weather/Features.hpp"
@@ -39,6 +40,7 @@ class NOAAStore;
 class MapOverlay;
 
 class ObservationDatabase;
+class FlightTrack;
 
 class MapWindow :
   public DoubleBufferWindow,
@@ -140,6 +142,15 @@ protected:
 
   TrailRenderer trail_renderer;
   TurnBackMarkerRenderer turn_back_marker_renderer;
+
+  /**
+   * A finished flight shown on the map.  Without OpenGL, protected
+   * by #DoubleBufferWindow::mutex.
+   */
+  std::shared_ptr<const FlightTrack> flight_track;
+
+  /** Created when the first track is shown */
+  std::unique_ptr<FlightTrackRenderer> flight_track_renderer;
 
   ProtectedTaskManager *task = nullptr;
   const ProtectedRoutePlanner *route_planner = nullptr;
@@ -256,6 +267,12 @@ public:
   void SetTopography(TopographyStore *_topography) noexcept;
   void SetTerrain(RasterTerrain *_terrain) noexcept;
 
+  /**
+   * Show the track of a finished flight below the live trail;
+   * nullptr removes it.  The caller redraws the map.
+   */
+  void SetFlightTrack(std::shared_ptr<const FlightTrack> track) noexcept;
+
   const std::shared_ptr<RaspStore> &GetRasp() const noexcept {
     return rasp_store;
   }
@@ -346,6 +363,7 @@ protected:
   void DrawTrail(Canvas &canvas, PixelPoint aircraft_pos,
                  TimeStamp min_time, bool enable_traildrift = false) noexcept;
   virtual void RenderTrail(Canvas &canvas, PixelPoint aircraft_pos) noexcept;
+  void RenderFlightTrack(Canvas &canvas) noexcept;
   virtual void RenderTrackBearing(Canvas &canvas, PixelPoint aircraft_pos) noexcept;
 
 

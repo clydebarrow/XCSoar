@@ -125,7 +125,7 @@ TEST_NAMES = \
 	TestAirspaceClearance \
 	TestAirspaceBoundary \
 	TestMETARParser \
-	TestIGCParser TestIGCFlightTimes \
+	TestIGCParser TestIGCFlightTimes TestFlightTrack \
 	TestNanoFileTransfer \
 	TestTraceBounds \
 	TestStrings TestUnescapeCString TestUTF8 TestWrapText TestLayout \
@@ -364,6 +364,15 @@ TEST_IGC_FLIGHT_TIMES_SOURCES = \
 	$(TEST_SRC_DIR)/TestIGCFlightTimes.cpp
 TEST_IGC_FLIGHT_TIMES_DEPENDS = LIBNMEA OPERATION IO OS THREAD GEO MATH UTIL TIME UNITS
 $(eval $(call link-program,TestIGCFlightTimes,TEST_IGC_FLIGHT_TIMES))
+
+TEST_FLIGHT_TRACK_SOURCES = \
+	$(SRC)/IGC/FlightTrack.cpp \
+	$(SRC)/IGC/IGCParser.cpp \
+	$(TEST_SRC_DIR)/FakeGeoid.cpp \
+	$(TEST_SRC_DIR)/tap.c \
+	$(TEST_SRC_DIR)/TestFlightTrack.cpp
+TEST_FLIGHT_TRACK_DEPENDS = IO OS GEO MATH UTIL TIME
+$(eval $(call link-program,TestFlightTrack,TEST_FLIGHT_TRACK))
 
 TEST_METAR_PARSER_SOURCES = \
 	$(SRC)/Weather/METARParser.cpp \
@@ -2663,6 +2672,7 @@ RUN_MAP_WINDOW_SOURCES = \
 	$(SRC)/Renderer/TurnBackMarkerRenderer.cpp \
 	$(SRC)/Renderer/TrafficRenderer.cpp \
 	$(SRC)/Renderer/TrailRenderer.cpp \
+	$(SRC)/Renderer/FlightTrackRenderer.cpp \
 	$(SRC)/Renderer/WaypointIconRenderer.cpp \
 	$(SRC)/Renderer/WaypointRenderer.cpp \
 	$(SRC)/Renderer/WaypointRendererSettings.cpp \

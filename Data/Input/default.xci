@@ -77,7 +77,7 @@ event=Beep 1
 # mode=default
 # ------------
 
-mode=Nav1 Nav2 Display1 Display2 Config1 Config2 Config3 Info1 Info2 Menu Vario1 Vario2
+mode=Nav1 Nav2 Display1 Display2 Config1 Config2 Config3 Info1 Info2 Info3 Menu Vario1 Vario2
 type=key
 data=ESCAPE
 event=Mode default
@@ -201,6 +201,13 @@ type=key
 data=RETURN
 event=NearestMapItems
 location=7
+
+mode=pan
+type=key
+data=F4
+event=FlightTrack hide
+label=$(HideFlightTrack)
+location=8
 
 # Waypoint image: F2 / F3 = zoom in/out (same F-keys as pan and traffic; not on main map)
 mode=wptimg
@@ -1104,7 +1111,7 @@ mode=Info1
 type=key
 data=APP4
 event=Mode Info2
-label=Info\nPage 2/3
+label=Info\nPage 2/4
 location=4
 
 mode=Info1
@@ -1154,7 +1161,7 @@ mode=Info2
 type=key
 data=APP4
 event=Mode Info3
-label=Info\nPage 3/3
+label=Info\nPage 3/4
 location=4
 
 mode=Info2
@@ -1202,9 +1209,9 @@ location=9
 # -------------
 mode=Info3
 type=key
-data=ESCAPE
-event=Mode default
-label=Cancel
+data=APP4
+event=Mode Info4
+label=Info\nPage 4/4
 location=4
 
 
@@ -1246,6 +1253,32 @@ event=QuickGuide
 event=Mode default
 label=Quick Guide
 location=9
+
+# -------------
+# mode=Info4
+# -------------
+mode=Info4
+type=key
+data=ESCAPE
+event=Mode default
+label=Cancel
+location=4
+
+mode=Info4
+type=key
+data=6
+event=FlightTrack show
+event=Mode default
+label=Flights
+location=5
+
+mode=Info4
+type=key
+data=7
+event=FlightTrack hide
+event=Mode default
+label=$(HideFlightTrack)
+location=6
 
 # -------------
 # mode=Menu
