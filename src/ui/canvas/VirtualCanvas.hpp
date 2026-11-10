@@ -49,6 +49,14 @@ public:
   void Destroy() noexcept;
 
 #ifdef USE_MEMORY_CANVAS
+  /**
+   * Like Create(), for a buffer that is only needed for one drawing:
+   * it is not enlarged to #reserve_size, and when there is not
+   * enough memory this returns false instead of ending the program.
+   */
+  [[nodiscard]]
+  bool TryCreate(const Canvas &canvas) noexcept;
+
   void Resize(PixelSize new_size) noexcept {
     if (new_size != GetSize())
       Create(*this, new_size);

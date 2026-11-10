@@ -105,15 +105,16 @@ FlightStatisticsRenderer::RenderContest(Canvas &canvas, const PixelRect rc,
 
   {
 #ifndef ENABLE_OPENGL
+    /* without the memory for the stencil, leave out the airspaces
+       rather than end the program */
     BufferCanvas stencil_canvas;
-    stencil_canvas.Create(canvas);
+    if (stencil_canvas.TryCreate(canvas))
 #endif
-
-    airspace_renderer.Draw(canvas,
+      airspace_renderer.Draw(canvas,
 #ifndef ENABLE_OPENGL
-                           stencil_canvas,
+                             stencil_canvas,
 #endif
-                           proj, settings_map.airspace);
+                             proj, settings_map.airspace);
   }
 
 #ifdef ENABLE_OPENGL
@@ -294,15 +295,16 @@ FlightStatisticsRenderer::RenderTask(Canvas &canvas, const PixelRect rc,
 
   {
 #ifndef ENABLE_OPENGL
+    /* without the memory for the stencil, leave out the airspaces
+       rather than end the program */
     BufferCanvas stencil_canvas;
-    stencil_canvas.Create(canvas);
+    if (stencil_canvas.TryCreate(canvas))
 #endif
-
-    airspace_renderer.Draw(canvas,
+      airspace_renderer.Draw(canvas,
 #ifndef ENABLE_OPENGL
-                           stencil_canvas,
+                             stencil_canvas,
 #endif
-                           proj, settings_map.airspace);
+                             proj, settings_map.airspace);
   }
 
 #ifdef ENABLE_OPENGL

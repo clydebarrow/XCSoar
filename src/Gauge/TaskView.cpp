@@ -105,15 +105,16 @@ PaintTask(Canvas &canvas, const WindowProjection &projection,
     airspace_renderer.SetAirspaces(airspaces);
 
 #ifndef ENABLE_OPENGL
+    /* without the memory for the stencil, leave out the airspaces
+       rather than end the program */
     BufferCanvas stencil_canvas;
-    stencil_canvas.Create(canvas);
+    if (stencil_canvas.TryCreate(canvas))
 #endif
-
-    airspace_renderer.Draw(canvas,
+      airspace_renderer.Draw(canvas,
 #ifndef ENABLE_OPENGL
-                           stencil_canvas,
+                             stencil_canvas,
 #endif
-                           projection, settings_map.airspace);
+                             projection, settings_map.airspace);
   }
 
 #ifdef ENABLE_OPENGL

@@ -4,6 +4,7 @@
 #include "ui/canvas/VirtualCanvas.hpp"
 
 #include <cassert>
+#include <new>
 
 VirtualCanvas::VirtualCanvas(PixelSize new_size) noexcept
 {
@@ -52,6 +53,29 @@ VirtualCanvas::Create([[maybe_unused]] const Canvas &canvas,
 #endif
 
   Create(new_size);
+}
+
+bool
+VirtualCanvas::TryCreate(const Canvas &canvas) noexcept
+{
+  const PixelSize new_size = canvas.GetSize();
+  const std::size_t n = CountPixels(new_size);
+  if (buffer.data == nullptr || n > capacity) {
+    Destroy();
+
+    try {
+      buffer.data = AllocatePixels<ActivePixelTraits::color_type>(n);
+    } catch (const std::bad_alloc &) {
+      return false;
+    }
+
+    capacity = n;
+  }
+
+  buffer.pitch = ActivePixelTraits::CalcIncrement(new_size.width) *
+    sizeof(ActivePixelTraits::color_type);
+  buffer.size = new_size;
+  return true;
 }
 
 void
