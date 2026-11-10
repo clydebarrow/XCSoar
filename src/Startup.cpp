@@ -1109,6 +1109,11 @@ Shutdown()
 
   Lua::StopAllBackground();
 
+  if (backend_components != nullptr &&
+      backend_components->flight_logger != nullptr)
+    backend_components->flight_logger->Finish(CommonInterface::Basic(),
+                                              CommonInterface::Calculated());
+
   // Stop logger and save igc file
   if (backend_components != nullptr && backend_components->igc_logger != nullptr) {
     operation.SetText(_("Shutdown, saving logs..."));

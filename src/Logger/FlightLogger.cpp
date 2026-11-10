@@ -86,6 +86,29 @@ FlightLogger::TickInternal(const MoreData &basic,
 }
 
 void
+FlightLogger::Finish(const MoreData &basic, const DerivedInfo &calculated)
+{
+  if (!takeoff_time.IsPlausible() || !basic.date_time_utc.IsPlausible())
+    return;
+
+  /* slower than any takeoff, and near the ground if that is known */
+  const bool slow = basic.ground_speed_available &&
+    basic.ground_speed < 10;
+  const bool low = !calculated.altitude_agl_valid ||
+    calculated.altitude_agl < 100;
+  if (!calculated.flight.on_ground && !(slow && low))
+    return;
+
+  LogString("Landing assumed at shutdown");
+  LogEvent(basic.date_time_utc, "landing");
+  OnFlight(takeoff_time, basic.date_time_utc);
+
+  seen_flying = false;
+  takeoff_time.Clear();
+  landing_time.Clear();
+}
+
+void
 FlightLogger::Tick(const MoreData &basic, const DerivedInfo &calculated)
 {
   assert(path != nullptr);

@@ -62,6 +62,14 @@ public:
    */
   void Tick(const MoreData &basic, const DerivedInfo &calculated);
 
+  /**
+   * Call this when the program stops.  A landing needs a minute
+   * without moving, which is cut short when the device is switched off
+   * soon after rolling to a stop: then log the landing now, unless the
+   * aircraft may still be in the air.
+   */
+  void Finish(const MoreData &basic, const DerivedInfo &calculated);
+
 protected:
   /**
    * Called after the landing of a flight whose start was logged.
