@@ -41,20 +41,26 @@ Bitmap::LoadStretch(ResourceId id, unsigned zoom)
   if (!Load(id))
     return false;
 
+  Scale(GetSize() * zoom);
+  return true;
+}
+
+void
+Bitmap::Scale(PixelSize new_size) noexcept
+{
   const bool _has_colors = has_colors;
 
-  Bitmap stretched;
-  stretched.Create(GetSize() * zoom);
+  Bitmap scaled;
+  scaled.Create(new_size);
 
   {
-    RasterCanvas canvas{stretched.buffer};
-    canvas.ScaleRectangle({}, stretched.GetSize(),
+    RasterCanvas canvas{scaled.buffer};
+    canvas.ScaleRectangle({}, new_size,
                           buffer.data, buffer.pitch, buffer.size);
   }
 
-  *this = std::move(stretched);
+  *this = std::move(scaled);
   has_colors = _has_colors;
-  return true;
 }
 
 #endif

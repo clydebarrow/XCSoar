@@ -168,6 +168,12 @@ public:
    * Load a bitmap and stretch it by the specified zoom factor.
    */
   bool LoadStretch(ResourceId id, unsigned zoom);
+
+  /**
+   * Scale the bitmap to the specified size.  The opacity of its
+   * pixels is not kept.
+   */
+  void Scale(PixelSize new_size) noexcept;
 #endif
 
   bool LoadFile(Path path);

@@ -169,6 +169,14 @@ MaskedIcon::LoadResource(ResourceId id, ResourceId mdpi_id,
   size.width = size.width * stretch >> 10;
   size.height = size.height * stretch >> 10;
 
+#ifndef ENABLE_OPENGL
+  /* the memory canvas would stretch the supersampled texels through a
+     temporary buffer at each Draw(); scale them once, which also keeps
+     only the pixels that are shown */
+  if (size != MaskedIconSourceSize(bitmap))
+    bitmap.Scale({size.width * 2, size.height});
+#endif
+
   if (center) {
     origin.x = size.width / 2;
     origin.y = size.height / 2;
