@@ -42,6 +42,10 @@ public:
     TopWindow::Create(text, size, style);
   }
 
+private:
+  void UpdateDimmed() noexcept;
+
+public:
   void AddDialog(WndForm *dialog) noexcept;
   void RemoveDialog(WndForm *dialog) noexcept;
 

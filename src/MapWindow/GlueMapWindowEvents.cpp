@@ -404,9 +404,13 @@ GlueMapWindow::OnMouseUp(PixelPoint p) noexcept
     if (HandleCompassTap(drag_start))
       return true;
 
-    /* wait as long as a double tap may take, so that a slow second
-       tap still opens the menu instead of the map items */
-    map_item_timer.Schedule(DoubleClick::INTERVAL);
+    /* wait until a double tap can no longer begin, so that a slow
+       second tap still opens the menu instead of the map items; the
+       interval counts from the first press, not from its release */
+    const std::chrono::steady_clock::duration interval =
+      DoubleClick::INTERVAL;
+    map_item_timer.Schedule(std::clamp(interval - click_time,
+                                       interval.zero(), interval));
     return true;
   }
 

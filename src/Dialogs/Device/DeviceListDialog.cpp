@@ -315,6 +315,15 @@ public:
                     unsigned idx) noexcept override;
   void OnCursorMoved(unsigned index) noexcept override;
 
+  bool CanActivateItem(unsigned index) const noexcept override {
+    return index < NUMDEV;
+  }
+
+  /* a tap on the selected device edits it, as the "Edit" button */
+  void OnActivateItem([[maybe_unused]] unsigned index) noexcept override {
+    EditCurrent();
+  }
+
 private:
   template<typename Pred>
   bool EarlierHas(unsigned idx, Pred pred) const noexcept {

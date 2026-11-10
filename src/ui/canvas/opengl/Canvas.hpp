@@ -172,6 +172,12 @@ public:
 
   void InvertRectangle(PixelRect r) noexcept;
 
+  /**
+   * Halve the brightness of #r, e.g. to show that what is behind a
+   * dialog is not available.
+   */
+  void DimRectangle(PixelRect r) noexcept;
+
   void DrawRectangle(PixelRect r) noexcept {
     DrawFilledRectangle(r, brush);
 

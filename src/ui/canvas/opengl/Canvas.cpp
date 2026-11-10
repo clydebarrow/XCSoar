@@ -116,6 +116,13 @@ Canvas::InvertRectangle(PixelRect r) noexcept
   glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 }
 
+void
+Canvas::DimRectangle(PixelRect r) noexcept
+{
+  const ScopeAlphaBlend alpha_blend;
+  DrawFilledRectangle(r, Color(0, 0, 0, 0x80));
+}
+
 static std::string_view
 ClipText(const Font &font, std::string_view text,
          int x, unsigned canvas_width) noexcept

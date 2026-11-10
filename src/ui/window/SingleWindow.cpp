@@ -5,6 +5,7 @@
 #include "Form/Form.hpp"
 
 #include <algorithm>
+#include <iterator>
 
 namespace UI {
 
@@ -17,6 +18,7 @@ SingleWindow::AddDialog(WndForm *dialog) noexcept
      OnResize() can tell one apart later.  The warning banner, if
      any, is already excluded. */
   dialog_rect = GetDialogRect();
+  UpdateDimmed();
   OnDialogChanged();
   dialog->ReinitialiseLayout(dialog_rect);
 }
@@ -27,7 +29,23 @@ SingleWindow::RemoveDialog([[maybe_unused]] WndForm *dialog) noexcept
   assert(dialog == dialogs.front());
 
   dialogs.pop_front();
+  UpdateDimmed();
   OnDialogChanged();
+}
+
+void
+SingleWindow::UpdateDimmed() noexcept
+{
+  /* a dialog opened from another dialog dims it, so that it does not
+     look as if it could still be used */
+  const Window *top = nullptr;
+  if (!dialogs.empty() && std::next(dialogs.begin()) != dialogs.end())
+    top = dialogs.front();
+
+  if (top != children.GetDimmedBy()) {
+    children.SetDimmedBy(top);
+    Invalidate();
+  }
 }
 
 PixelRect

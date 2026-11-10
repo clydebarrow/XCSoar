@@ -23,6 +23,11 @@ class WindowList {
 
   List list;
 
+  /**
+   * Everything below this window is dimmed while it is visible.
+   */
+  const Window *dimmed_by = nullptr;
+
 public:
   ~WindowList() noexcept {
     assert(list.empty());
@@ -35,8 +40,23 @@ public:
     list.push_back(w);
   }
 
+  /**
+   * Dim everything below #w (nullptr for nothing); the caller must
+   * repaint.
+   */
+  void SetDimmedBy(const Window *w) noexcept {
+    dimmed_by = w;
+  }
+
+  const Window *GetDimmedBy() const noexcept {
+    return dimmed_by;
+  }
+
   void Remove(Window &w) noexcept {
     assert(Contains(w));
+
+    if (&w == dimmed_by)
+      dimmed_by = nullptr;
 
     list.erase(list.iterator_to(w));
   }

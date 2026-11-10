@@ -19,6 +19,8 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
+#include <type_traits>
 #include <string.h>
 
 #ifdef ESP_PLATFORM
@@ -75,6 +77,36 @@ Canvas::InvertRectangle(PixelRect r)
     return;
 
   CopyNot(r.GetTopLeft(), r.GetSize(), buffer, r.GetTopLeft());
+}
+
+void
+Canvas::DimRectangle(PixelRect r) noexcept
+{
+  r = r.Intersection(GetRect());
+  if (r.IsEmpty())
+    return;
+
+  using Traits = ActivePixelTraits;
+  using Integer = Traits::integer_type;
+  static_assert(sizeof(Integer) == sizeof(Traits::color_type));
+
+  /* shifting each pixel right by one halves every channel; the mask
+     drops the bit that moved in from the next channel */
+  constexpr Integer mask = std::is_same_v<Traits, RGB565PixelTraits>
+    ? Integer(0x7bef)
+    : Integer(0x7f7f7f7f);
+
+  auto *row = reinterpret_cast<std::byte *>(buffer.data) +
+    r.top * buffer.pitch + r.left * sizeof(Integer);
+  for (unsigned y = r.GetHeight(); y > 0; --y, row += buffer.pitch) {
+    std::byte *p = row;
+    for (unsigned x = r.GetWidth(); x > 0; --x, p += sizeof(Integer)) {
+      Integer value;
+      memcpy(&value, p, sizeof(value));
+      value = (value >> 1) & mask;
+      memcpy(p, &value, sizeof(value));
+    }
+  }
 }
 
 template<typename Canvas, typename PixelOperations>

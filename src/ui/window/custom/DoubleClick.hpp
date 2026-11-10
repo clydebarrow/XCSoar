@@ -19,7 +19,7 @@ public:
    * updates are slower.
    */
 #ifdef ESP_PLATFORM
-  static constexpr auto INTERVAL = std::chrono::milliseconds(750);
+  static constexpr auto INTERVAL = std::chrono::milliseconds(600);
 #else
   static constexpr auto INTERVAL = std::chrono::milliseconds(IsKobo() ? 750 : 500);
 #endif

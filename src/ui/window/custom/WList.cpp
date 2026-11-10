@@ -65,6 +65,10 @@ WindowList::PaintAbove(Canvas &canvas, PixelPoint origin,
       /* below the target: nothing to do, unless the target is in
          this child */
       if (&child == target) {
+        /* what is below it must be dimmed */
+        if (&child == dimmed_by)
+          return false;
+
         if (child.IsTransparent() || !PaintAt(canvas, child, rc))
           return false;
         damage = rc;
@@ -77,6 +81,9 @@ WindowList::PaintAbove(Canvas &canvas, PixelPoint origin,
       }
       continue;
     }
+
+    if (&child == dimmed_by)
+      canvas.DimRectangle(damage);
 
     if (!rc.OverlapsWith(damage))
       continue;
@@ -305,6 +312,9 @@ WindowList::Paint(Canvas &canvas) noexcept
     PaintWindow &child = (PaintWindow &)*i;
     if (!child.IsVisible())
       continue;
+
+    if (&child == dimmed_by)
+      canvas.DimRectangle(canvas.GetRect());
 
 #ifdef USE_MEMORY_CANVAS
     const PixelPoint child_pos = child.GetTopLeft();
