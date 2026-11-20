@@ -6,7 +6,12 @@
 #include "Simulator.hpp"
 #include "Radio/RadioFrequency.hpp"
 
+#ifdef ESP_PLATFORM
+#include "Device/HostSupplyVoltage.hpp"
+#endif
+
 #include <algorithm>
+#include <cmath>
 
 /**
  * Initializes the DeviceBlackboard
@@ -157,6 +162,17 @@ void
 DeviceBlackboard::ExpireWallClock() noexcept
 {
   const std::lock_guard lock{mutex};
+
+#ifdef ESP_PLATFORM
+  /* without a device, nothing else merges in the host's new voltage */
+  if (const double voltage = HostSupplyVoltage();
+      voltage != host_voltage &&
+      !(std::isnan(voltage) && std::isnan(host_voltage))) {
+    host_voltage = voltage;
+    ScheduleMerge();
+  }
+#endif
+
   if (!Basic().alive)
     return;
 
@@ -194,6 +210,15 @@ DeviceBlackboard::Merge() noexcept
     basic.Expire();
     real_data.Complement(basic);
   }
+
+#ifdef ESP_PLATFORM
+  /* the host's own battery, unless a device reports a voltage */
+  if (const double voltage = HostSupplyVoltage();
+      !real_data.voltage_available && !std::isnan(voltage)) {
+    real_data.voltage = voltage;
+    real_data.voltage_available.Update(real_data.clock);
+  }
+#endif
 
   real_clock.Normalise(real_data);
 

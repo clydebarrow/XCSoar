@@ -7,6 +7,7 @@
 #include "Monitor/HostTrafficAlarm.hpp"
 #include "Audio/HostVolume.hpp"
 #include "HostClubGlider.hpp"
+#include "Device/HostSupplyVoltage.hpp"
 #include "ui/canvas/memory/HostDraw.hpp"
 #include "ui/canvas/VirtualCanvas.hpp"
 #include "ui/display/Display.hpp"
@@ -14,6 +15,8 @@
 #include "ui/event/Queue.hpp"
 
 #include <algorithm>
+#include <atomic>
+#include <cmath>
 #include <iterator>
 
 namespace XCSoarEsp32 {
@@ -68,6 +71,14 @@ ConnectDisplay(const Config &config) noexcept
   /* the map buffers grow to the full screen in pan mode; allocating
      them at that size from the start keeps the heap unfragmented */
   VirtualCanvas::reserve_size = {config.width, config.height};
+}
+
+static std::atomic<float> supply_voltage{NAN};
+
+void
+SetSupplyVoltage(float volts) noexcept
+{
+  supply_voltage.store(volts, std::memory_order_relaxed);
 }
 
 void
@@ -154,6 +165,12 @@ HostClubGlider(const char *type, const char *registration) noexcept
   const auto *config = XCSoarEsp32::host_config;
   if (config != nullptr && config->club_glider != nullptr)
     config->club_glider(type, registration, config->ctx);
+}
+
+double
+HostSupplyVoltage() noexcept
+{
+  return XCSoarEsp32::supply_voltage.load(std::memory_order_relaxed);
 }
 
 bool

@@ -11,6 +11,7 @@
 #include "time/WrapClock.hpp"
 
 #include <array>
+#include <limits>
 
 class AtmosphericPressure;
 class OperationEnvironment;
@@ -54,6 +55,14 @@ class DeviceBlackboard
    * Clock management for #real_data and #replay_data.
    */
   WrapClock real_clock, replay_clock;
+
+#ifdef ESP_PLATFORM
+  /**
+   * The host's supply voltage that ExpireWallClock() last saw; NaN
+   * if there is none.
+   */
+  double host_voltage = std::numeric_limits<double>::quiet_NaN();
+#endif
 
 public:
   Mutex mutex;

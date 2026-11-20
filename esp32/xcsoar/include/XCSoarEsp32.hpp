@@ -421,6 +421,14 @@ void
 Feed(const char *name, std::span<const std::byte> data) noexcept;
 
 /**
+ * Report the supply voltage, such as that of the host's battery, in
+ * volts; NaN when it is not known.  The "Battery" InfoBox shows it
+ * unless a device reports a voltage.  May be called from any task.
+ */
+void
+SetSupplyVoltage(float volts) noexcept;
+
+/**
  * Report a device found by BleHost::start_scan.  #name may be nullptr
  * when the device sent none; #features is a set of BLE_FEATURE_* bits.
  * May be called from any task.
