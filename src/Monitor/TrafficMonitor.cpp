@@ -32,9 +32,6 @@ static constexpr auto REPEAT_INTERVAL = seconds(5);
 /** How long the Mute button silences a target. */
 static constexpr auto MUTE_DURATION = minutes(1);
 
-/** The alert screen stays this long after the alarm cleared. */
-static constexpr auto ALERT_CLOSE_DELAY = seconds(3);
-
 /* FLARM alarm type of a collision alarm with an aircraft */
 static constexpr uint8_t ALARM_TYPE_AIRCRAFT = 2;
 
@@ -79,7 +76,7 @@ TrafficMonitor::IsMuted() const noexcept
 {
   const auto &status = CommonInterface::Basic().flarm.status;
   return muted_until && steady_clock::now() < *muted_until &&
-    status.target_id == muted_id && status.alarm_level <= muted_level;
+    status.target_id == muted_id;
 }
 
 void
@@ -100,17 +97,16 @@ TrafficMonitor::CloseAlert() noexcept
  * traffic that LogComputer writes: "LXCSUSR,hhmmss,DISMISS,id".
  */
 static void
-LogAlertAction(const char *action) noexcept
+LogAlertAction(const char *action, FlarmId id) noexcept
 try {
   if (backend_components == nullptr || !backend_components->igc_logger)
     return;
 
-  const auto &basic = CommonInterface::Basic();
-  const BrokenTime &time = basic.date_time_utc;
+  const BrokenTime &time = CommonInterface::Basic().date_time_utc;
   char line[48];
   snprintf(line, sizeof(line), "USR,%02u%02u%02u,%s,%06X",
            time.hour, time.minute, time.second, action,
-           unsigned(basic.flarm.status.target_id.Value()));
+           unsigned(id.Value()));
   backend_components->igc_logger->LogComment(line);
 } catch (...) {
 }
@@ -118,7 +114,7 @@ try {
 void
 TrafficMonitor::DismissAlert() noexcept
 {
-  LogAlertAction("DISMISS");
+  LogAlertAction("DISMISS", alert_id);
   DismissAlertQuietly();
 }
 
@@ -146,14 +142,11 @@ TrafficMonitor::OnAlertClosed(const TrafficAlertWidget &widget) noexcept
 void
 TrafficMonitor::MuteAlert() noexcept
 {
-  const auto &basic = CommonInterface::Basic();
-  muted_id = basic.flarm.status.target_id;
-  /* an urgent alarm always comes through */
-  muted_level = std::min(basic.flarm.status.alarm_level,
-                         FlarmTraffic::AlarmType::IMPORTANT);
+  /* the target shown, which the alarm may have left since */
+  muted_id = alert_id;
   muted_until = steady_clock::now() + MUTE_DURATION;
   spoken.reset();
-  LogAlertAction("MUTE");
+  LogAlertAction("MUTE", alert_id);
   DismissAlertQuietly();
 }
 
@@ -178,22 +171,12 @@ TrafficMonitor::CheckAlert() noexcept
   if (!is_warning || status.alarm_type != ALARM_TYPE_AIRCRAFT) {
     dismissed_id = FlarmId::Undefined();
     dismissed_level = FlarmTraffic::AlarmType::NONE;
-
-    if (alert != nullptr) {
-      const auto now = steady_clock::now();
-      if (!alert_clear_time) {
-        alert_clear_time = now;
-        /* show that the alarm has cleared */
-        alert->Update();
-      } else if (now - *alert_clear_time >= ALERT_CLOSE_DELAY)
-        CloseAlert();
-    }
+    CloseAlert();
     return;
   }
 
-  alert_clear_time.reset();
-
   if (alert != nullptr) {
+    alert_id = status.target_id;
     alert->Update();
     return;
   }
@@ -218,6 +201,7 @@ TrafficMonitor::CheckAlert() noexcept
 
   auto &main_window = *CommonInterface::main_window;
   main_window.SetFullScreen(true);
+  alert_id = status.target_id;
   alert = new TrafficAlertWidget(*this);
   main_window.SetWidget(alert);
   /* hides the traffic gauge, which would cover the alert */

@@ -9,6 +9,7 @@
 #include "Look/FontDescription.hpp"
 #include "Form/Button.hpp"
 #include "FLARM/Details.hpp"
+#include "FLARM/Status.hpp"
 #include "Formatter/UserUnits.hpp"
 #include "Language/Language.hpp"
 #include "Screen/Layout.hpp"
@@ -44,6 +45,12 @@ class TrafficAlertWindow final : public ContainerWindow {
   /** the part above the buttons */
   PixelRect content;
 
+  /**
+   * The alarm painted last; it stays until the alert closes, which
+   * happens just after the alarm clears.
+   */
+  FlarmStatus shown;
+
 public:
   TrafficAlertWindow(ContainerWindow &parent, const PixelRect &rc,
                      TrafficMonitor &_monitor) noexcept;
@@ -70,6 +77,8 @@ TrafficAlertWindow::TrafficAlertWindow(ContainerWindow &parent,
                                        TrafficMonitor &_monitor) noexcept
   :monitor(_monitor)
 {
+  shown.Clear();
+
   WindowStyle style;
   style.Hide();
   style.ControlParent();
@@ -341,20 +350,17 @@ TrafficAlertWindow::PaintText(Canvas &canvas, const PixelRect &rc,
 void
 TrafficAlertWindow::OnPaint(Canvas &canvas) noexcept
 {
-  const FlarmStatus &status = CommonInterface::Basic().flarm.status;
+  const FlarmStatus &current = CommonInterface::Basic().flarm.status;
+  if (current.available && current.alarm_type == ALARM_TYPE_AIRCRAFT &&
+      current.alarm_level != FlarmTraffic::AlarmType::NONE &&
+      current.alarm_level != FlarmTraffic::AlarmType::INFO_ALERT)
+    shown = current;
+
+  const FlarmStatus &status = shown;
   canvas.SetBackgroundTransparent();
 
-  if (!status.available || status.alarm_type != ALARM_TYPE_AIRCRAFT ||
-      status.alarm_level == FlarmTraffic::AlarmType::NONE) {
-    /* shown for a few seconds before the alert closes */
+  if (status.alarm_level == FlarmTraffic::AlarmType::NONE) {
     canvas.Clear(COLOR_DARK_GRAY);
-    canvas.SetTextColor(COLOR_WHITE);
-    canvas.Select(large_font);
-    const char *text = _("Alarm cleared");
-    const PixelSize size = canvas.CalcTextSize(text);
-    const PixelPoint center = content.GetCenter();
-    canvas.DrawText({center.x - int(size.width) / 2,
-                     center.y - int(size.height) / 2}, text);
   } else {
     const bool urgent =
       status.alarm_level == FlarmTraffic::AlarmType::URGENT;

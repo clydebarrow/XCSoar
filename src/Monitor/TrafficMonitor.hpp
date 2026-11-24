@@ -31,11 +31,8 @@ class TrafficMonitor {
   /** The alert shown, or nullptr; owned by the main window */
   TrafficAlertWidget *alert = nullptr;
 
-  /**
-   * When the alarm shown on #alert cleared.  The times here are taken
-   * from a steady clock: the GPS clock stops when the data does.
-   */
-  std::optional<std::chrono::steady_clock::time_point> alert_clear_time;
+  /** The target of the alarm shown on #alert */
+  FlarmId alert_id = FlarmId::Undefined();
 
   /**
    * The alert was dismissed for this target at this level; it comes
@@ -45,11 +42,11 @@ class TrafficMonitor {
   FlarmTraffic::AlarmType dismissed_level = FlarmTraffic::AlarmType::NONE;
 
   /**
-   * This target is muted, below #muted_level's next level, until
-   * #muted_until: no sound, no speech and no alert screen.
+   * This target is muted until #muted_until, taken from a steady
+   * clock (the GPS clock stops when the data does): no sound, no
+   * speech and no alert screen, at any alarm level.
    */
   FlarmId muted_id = FlarmId::Undefined();
-  FlarmTraffic::AlarmType muted_level = FlarmTraffic::AlarmType::NONE;
   std::optional<std::chrono::steady_clock::time_point> muted_until;
 
 public:
