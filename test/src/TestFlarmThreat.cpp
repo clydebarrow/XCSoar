@@ -183,6 +183,10 @@ AddTarget(FlarmData &flarm, TimeStamp clock, uint32_t id, double north,
   t.track = Angle::HalfCircle();
   t.speed = speed;
   t.track_received = t.speed_received = true;
+  t.climb_rate = 0;
+  t.turn_rate = 0;
+  t.climb_rate_received = t.turn_rate_received = false;
+  t.type = FlarmTraffic::AircraftType::UNKNOWN;
   t.source = source;
   t.alarm_level = FlarmTraffic::AlarmType::NONE;
   flarm.traffic.modified.Update(clock);
@@ -351,16 +355,159 @@ TestGroundAndTow() noexcept
   }
 }
 
+static FlarmTraffic &
+FindTarget(FlarmData &flarm, uint32_t id) noexcept
+{
+  return *flarm.traffic.FindTraffic(FlarmId::FromValue(id));
+}
+
+static void
+TestParked() noexcept
+{
+  MoreData basic;
+  FlarmData flarm;
+
+  /* standing still 300 m ahead, as an aircraft parked at the field */
+  {
+    ThreatComputer computer;
+    SetOwnship(basic, At(100));
+    flarm.Clear();
+    AddTarget(flarm, basic.clock, 0x7C0001, 300, -20, 0);
+    FindTarget(flarm, 0x7C0001).type = FlarmTraffic::AircraftType::UNKNOWN;
+    computer.Process(flarm, basic, true);
+    ok1(TargetAlarm(flarm, 0x7C0001) == FlarmTraffic::AlarmType::NONE);
+  }
+
+  /* a helicopter can hover there */
+  {
+    ThreatComputer computer;
+    SetOwnship(basic, At(100));
+    flarm.Clear();
+    AddTarget(flarm, basic.clock, 0x7C0001, 300, -20, 0);
+    FindTarget(flarm, 0x7C0001).type = FlarmTraffic::AircraftType::HELICOPTER;
+    computer.Process(flarm, basic, true);
+    ok1(TargetAlarm(flarm, 0x7C0001) == FlarmTraffic::AlarmType::URGENT);
+  }
+}
+
+/**
+ * The alarm for a glider head on, 650 m away (urgent by time), at
+ * #altitude, climbing #climb faster than the ownship.
+ */
+static FlarmTraffic::AlarmType
+GliderAlarm(double altitude, double climb) noexcept
+{
+  ThreatComputer computer;
+  MoreData basic;
+  FlarmData flarm;
+  SetOwnship(basic, At(100));
+  flarm.Clear();
+  AddTarget(flarm, basic.clock, 0x7C0001, 650, altitude, 50);
+  FlarmTraffic &t = FindTarget(flarm, 0x7C0001);
+  t.type = FlarmTraffic::AircraftType::GLIDER;
+  t.climb_rate = climb;
+  t.climb_rate_received = true;
+  computer.Process(flarm, basic, true);
+  return TargetAlarm(flarm, 0x7C0001);
+}
+
+static void
+TestGliderHeight() noexcept
+{
+  ok1(GliderAlarm(0, 0) == FlarmTraffic::AlarmType::URGENT);
+  ok1(GliderAlarm(25, 0) == FlarmTraffic::AlarmType::URGENT);
+  /* more than 100 ft below or above: low */
+  ok1(GliderAlarm(-45, 0) == FlarmTraffic::AlarmType::LOW);
+  ok1(GliderAlarm(45, 0) == FlarmTraffic::AlarmType::LOW);
+  /* gliders climb alike: no alarm for one 70 m below climbing faster */
+  ok1(GliderAlarm(-70, 3) == FlarmTraffic::AlarmType::NONE);
+}
+
+/**
+ * The alarm for a glider #north of the ownship, closing, after the
+ * ownship has circled to the right for ten seconds; the glider turns
+ * at #turn_rate.
+ */
+static FlarmTraffic::AlarmType
+ThermalAlarm(double north, double turn_rate) noexcept
+{
+  ThreatComputer computer;
+  MoreData basic;
+  FlarmData flarm;
+
+  for (unsigned i = 0; i <= 10; i++) {
+    SetOwnship(basic, At(100 + i));
+    basic.track = Angle::Degrees(15 * i);
+    basic.ground_speed = 20;
+    flarm.Clear();
+    if (i == 10) {
+      AddTarget(flarm, basic.clock, 0x7C0001, north, 0, 30);
+      FlarmTraffic &t = FindTarget(flarm, 0x7C0001);
+      t.type = FlarmTraffic::AircraftType::GLIDER;
+      t.turn_rate = turn_rate;
+    }
+    computer.Process(flarm, basic, true);
+  }
+
+  return TargetAlarm(flarm, 0x7C0001);
+}
+
+static void
+TestThermal() noexcept
+{
+  /* across the thermal, circling the same way: low */
+  ok1(ThermalAlarm(140, 15) == FlarmTraffic::AlarmType::LOW);
+  /* closer than 100 m */
+  ok1(ThermalAlarm(90, 15) == FlarmTraffic::AlarmType::URGENT);
+  /* circling the other way */
+  ok1(ThermalAlarm(140, -15) == FlarmTraffic::AlarmType::URGENT);
+  /* flying straight */
+  ok1(ThermalAlarm(140, 0) == FlarmTraffic::AlarmType::URGENT);
+}
+
+static void
+TestHold() noexcept
+{
+  ThreatComputer computer;
+  MoreData basic;
+  FlarmData flarm;
+
+  SetOwnship(basic, At(100));
+  flarm.Clear();
+  AddTarget(flarm, basic.clock, 0x7C0001, 650, 0, 50);
+  computer.Process(flarm, basic, true);
+  ok1(flarm.status.alarm_level == FlarmTraffic::AlarmType::URGENT);
+
+  /* the prediction no longer gives an alarm: it stays a while */
+  SetOwnship(basic, At(101));
+  flarm.Clear();
+  AddTarget(flarm, basic.clock, 0x7C0001, 650, 2000 * FT, 50);
+  computer.Process(flarm, basic, true);
+  ok1(flarm.status.alarm_level == FlarmTraffic::AlarmType::URGENT);
+  ok1(TargetAlarm(flarm, 0x7C0001) == FlarmTraffic::AlarmType::URGENT);
+
+  SetOwnship(basic, At(104));
+  flarm.Clear();
+  AddTarget(flarm, basic.clock, 0x7C0001, 650, 2000 * FT, 50);
+  computer.Process(flarm, basic, true);
+  ok1(!flarm.status.available);
+  ok1(TargetAlarm(flarm, 0x7C0001) == FlarmTraffic::AlarmType::NONE);
+}
+
 int
 main()
 {
-  plan_tests(47);
+  plan_tests(47 + 2 + 5 + 4 + 5);
 
   TestScore();
   TestAlarm();
   TestTurns();
   TestComputer();
   TestGroundAndTow();
+  TestParked();
+  TestGliderHeight();
+  TestThermal();
+  TestHold();
 
   return exit_status();
 }

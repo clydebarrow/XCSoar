@@ -26,10 +26,15 @@ struct MoreData;
  * a FLARM reports a higher one.  This gives the same warnings as a
  * FLARM: the traffic gauge and map colors, and the spoken alert.
  *
- * Targets reported on the ground raise no alarm.  On an aerotow, the
- * tug is found just after takeoff, as the powered aircraft close in
- * front moving with the ownship, and raises no alarm until it is
- * further away than on the tow.
+ * Targets reported on the ground, or standing still, raise no alarm.
+ * On an aerotow, the tug is found just after takeoff, as the powered
+ * aircraft close in front moving with the ownship, and raises no
+ * alarm until it is further away than on the tow.
+ *
+ * Between gliders, which climb and sink alike in the same air, the
+ * height difference is taken to stay as it is.  A glider more than
+ * 100 ft above or below, or one circling the same way in the same
+ * thermal, raises only a low alarm.
  */
 class ThreatComputer {
   /**
@@ -44,9 +49,34 @@ class ThreatComputer {
   static constexpr float IMPORTANT_TIME = 12;
   static constexpr float LOW_TIME = 18;
 
+  /**
+   * Between gliders, a higher alarm than low only within this height,
+   * in meters (100 ft).
+   */
+  static constexpr float GLIDER_ALARM_HEIGHT = 30.48;
+
+  /**
+   * While both gliders circle the same way, a higher alarm than low
+   * only within this distance, in meters (and within
+   * #GLIDER_ALARM_HEIGHT).
+   */
+  static constexpr float THERMAL_ALARM_DISTANCE = 100;
+
+  /**
+   * An alarm stays this long, in seconds, after the prediction last
+   * gave it, so that it does not flicker.
+   */
+  static constexpr float ALARM_HOLD_TIME = 3;
+
   struct TargetAlarm {
     FlarmId id;
     FlarmTraffic::AlarmType level;
+
+    /** when the prediction last gave #level */
+    TimeStamp time;
+
+    /** the time to close proximity at #time */
+    float proximity_time;
   };
 
   ThreatSettings settings;

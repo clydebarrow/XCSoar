@@ -37,6 +37,14 @@ static constexpr float TOW_RELEASE_ALTITUDE = 150;
 /* PFLAU AlarmType of a collision alarm with an aircraft */
 static constexpr uint8_t ALARM_TYPE_AIRCRAFT = 2;
 
+/* circling, as in a thermal, in degrees per second */
+static constexpr float CIRCLING_TURN_RATE = 8;
+
+/* standing still: slower than this over the ground, in m/s, and
+   climbing or sinking slower than this, in m/s */
+static constexpr float PARKED_MAX_SPEED = 2;
+static constexpr float PARKED_MAX_CLIMB = 0.5f;
+
 static float
 StraightIfSlow(float degrees_per_second) noexcept
 {
@@ -50,6 +58,40 @@ IsGlider(FlarmTraffic::AircraftType type) noexcept
 {
   return type == FlarmTraffic::AircraftType::GLIDER ||
     type == FlarmTraffic::AircraftType::HANG_GLIDER;
+}
+
+/**
+ * Can this kind of aircraft stand still over the ground in flight?
+ */
+static bool
+CanHover(FlarmTraffic::AircraftType type) noexcept
+{
+  using Type = FlarmTraffic::AircraftType;
+  return type == Type::HELICOPTER || type == Type::BALLOON ||
+    type == Type::AIRSHIP || type == Type::UAV ||
+    type == Type::PARA_GLIDER || type == Type::HANG_GLIDER ||
+    type == Type::PARACHUTE;
+}
+
+/**
+ * Is this target standing still, as an aircraft parked at the field
+ * does when the sender does not say it is on the ground?
+ */
+static bool
+IsParked(const FlarmTraffic &traffic) noexcept
+{
+  return !CanHover(traffic.type) &&
+    double(traffic.speed) < PARKED_MAX_SPEED &&
+    (!traffic.climb_rate_received ||
+     std::fabs(traffic.climb_rate) < PARKED_MAX_CLIMB);
+}
+
+static bool
+IsCirclingSameWay(float own_turn_rate, float turn_rate) noexcept
+{
+  return std::fabs(own_turn_rate) >= CIRCLING_TURN_RATE &&
+    std::fabs(turn_rate) >= CIRCLING_TURN_RATE &&
+    (own_turn_rate > 0) == (turn_rate > 0);
 }
 
 /**
@@ -137,6 +179,7 @@ ThreatComputer::IsTow(const FlarmTraffic &traffic, const ThreatGeometry &g,
 void
 ThreatComputer::Assess(const FlarmData &flarm, const MoreData &basic) noexcept
 {
+  const auto previous = alarms;
   alarms.clear();
   has_status = false;
 
@@ -177,32 +220,57 @@ ThreatComputer::Assess(const FlarmData &flarm, const MoreData &basic) noexcept
     g.own_velocity_east = own_east;
     g.velocity_north = target_north - own_north;
     g.velocity_east = target_east - own_east;
-    g.vertical_speed = float(traffic.climb_rate) - own_vs;
     g.turn_rate = StraightIfSlow(float(traffic.turn_rate));
     g.own_turn_rate = StraightIfSlow(own_turn_rate);
     /* XCSoar is mostly flown in gliders */
     g.gliders = IsGlider(traffic.type);
+    /* gliders in the same air climb and sink alike */
+    g.vertical_speed = g.gliders
+      ? 0.0f
+      : float(traffic.climb_rate) - own_vs;
 
-    if (IsTow(traffic, g, basic.clock) || traffic.on_ground)
+    if (IsTow(traffic, g, basic.clock) || traffic.on_ground ||
+        IsParked(traffic))
       continue;
 
     const ThreatAssessment assessment = AssessThreat(g, settings);
-    if (!assessment.alarm)
+    TargetAlarm alarm{traffic.id, FlarmTraffic::AlarmType::NONE,
+                      basic.clock, assessment.proximity_time};
+    if (assessment.alarm) {
+      alarm.level = assessment.proximity_time <= URGENT_TIME
+        ? FlarmTraffic::AlarmType::URGENT
+        : assessment.proximity_time <= IMPORTANT_TIME
+        ? FlarmTraffic::AlarmType::IMPORTANT
+        : FlarmTraffic::AlarmType::LOW;
+
+      if (g.gliders && alarm.level > FlarmTraffic::AlarmType::LOW &&
+          (std::fabs(g.altitude) > GLIDER_ALARM_HEIGHT ||
+           (IsCirclingSameWay(own_turn_rate, float(traffic.turn_rate)) &&
+            std::hypot(g.north, g.east) > THERMAL_ALARM_DISTANCE)))
+        alarm.level = FlarmTraffic::AlarmType::LOW;
+    }
+
+    for (const auto &held : previous) {
+      if (held.id == traffic.id && held.level > alarm.level &&
+          basic.clock >= held.time &&
+          FloatDuration{basic.clock - held.time}.count() < ALARM_HOLD_TIME) {
+        alarm = held;
+        break;
+      }
+    }
+
+    if (alarm.level == FlarmTraffic::AlarmType::NONE)
       continue;
 
-    const auto level = assessment.proximity_time <= URGENT_TIME
-      ? FlarmTraffic::AlarmType::URGENT
-      : assessment.proximity_time <= IMPORTANT_TIME
-      ? FlarmTraffic::AlarmType::IMPORTANT
-      : FlarmTraffic::AlarmType::LOW;
-
     if (!alarms.full())
-      alarms.push_back({traffic.id, level});
+      alarms.push_back(alarm);
 
-    if (best == nullptr || assessment.proximity_time < best_time) {
+    const float age = float(FloatDuration{basic.clock - alarm.time}.count());
+    const float proximity_time = std::max(alarm.proximity_time - age, 0.0f);
+    if (best == nullptr || proximity_time < best_time) {
       best = &traffic;
-      best_time = assessment.proximity_time;
-      best_level = level;
+      best_time = proximity_time;
+      best_level = alarm.level;
     }
   }
 

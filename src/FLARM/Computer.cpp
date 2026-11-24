@@ -7,6 +7,9 @@
 #include "Geo/GeoVector.hpp"
 #include "time/Cast.hxx"
 
+/* the time constant of the computed turn rate, in seconds */
+static constexpr double TURN_RATE_SMOOTHING_S = 3;
+
 void
 FlarmComputer::Process(FlarmData &flarm, const FlarmData &last_flarm,
                        const NMEAInfo &basic) noexcept
@@ -111,8 +114,11 @@ FlarmComputer::Process(FlarmData &flarm, const FlarmData &last_flarm,
     // Check if the target has been seen before in the last seconds
     const FlarmTraffic *last_traffic =
       last_flarm.traffic.FindTraffic(traffic.id);
-    if (last_traffic == nullptr || !last_traffic->valid)
+    if (last_traffic == nullptr || !last_traffic->valid) {
+      if (!traffic.turn_rate_received)
+        traffic.turn_rate = 0;
       continue;
+    }
 
     // Calculate the time difference between now and the last contact
     const auto dt = traffic.valid.GetTimeDifference(last_traffic->valid);
@@ -138,10 +144,15 @@ FlarmComputer::Process(FlarmData &flarm, const FlarmData &last_flarm,
         traffic.track = vec.bearing;
 
       // Calculate the turn rate
+      /* smoothed: the track changes in steps, and the rate over one
+         report jumps about */
       if (!traffic.turn_rate_received) {
-        Angle turn_rate = traffic.track - last_traffic->track;
-        traffic.turn_rate =
-          turn_rate.AsDelta().Degrees() / ToFloatSeconds(dt);
+        const double seconds = ToFloatSeconds(dt);
+        const Angle change = traffic.track - last_traffic->track;
+        const double rate = change.AsDelta().Degrees() / seconds;
+        traffic.turn_rate = last_traffic->turn_rate +
+          (rate - last_traffic->turn_rate) * seconds /
+          (TURN_RATE_SMOOTHING_S + seconds);
       }
 
       // Calculate the speed [m/s]
