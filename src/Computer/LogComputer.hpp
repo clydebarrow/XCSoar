@@ -57,7 +57,8 @@ private:
    *
    *   LXCSOWN,hhmmss,track,ground speed,climb,turn rate
    *   LXCSTGT,hhmmss,id,alarm level,north,east,height,track,speed,
-   *     climb,turn rate[,seconds to close proximity]
+   *     climb,turn rate,source,GDL90 address type (empty for other
+   *     traffic)[,seconds to close proximity]
    *   LXCSCLR,hhmmss  (no such traffic any more)
    */
   void LogThreats(const MoreData &basic,

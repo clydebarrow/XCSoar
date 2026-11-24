@@ -27,12 +27,15 @@ static constexpr const char *CLUB_FLIGHTS_PENDING = "flights-pending.jsonl";
  *   "logo": "club-logo.png",
  *   "glider": { "type": "PW6", "registration": "WGQ" },
  *   "flight_upload_url": "https://example.org/flights",
- *   "flight_upload_key": "a secret shared with the server"
+ *   "flight_upload_key": "a secret shared with the server",
+ *   "wifi": [ { "ssid": "Clubhouse", "password": "a secret" } ]
  * }
  *
  * The host that sends the flights reads "flight_upload_key" itself:
  * each request carries "X-Signature: sha256=" and the HMAC-SHA256 of
- * its body with that key, in hex.
+ * its body with that key, in hex.  The ESPHome host also saves the
+ * networks of "wifi" at start-up (a network without a password is
+ * open).
  */
 struct ClubConfig {
   std::string organisation;

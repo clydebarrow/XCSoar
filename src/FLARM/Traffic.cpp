@@ -97,6 +97,7 @@ FlarmTraffic::Update(const FlarmTraffic &other) noexcept
   type = other.type;
   source = other.source;
   id_type = other.id_type;
+  gdl90_address_type = other.gdl90_address_type;
   rssi = other.rssi;
   rssi_available = other.rssi_available;
   source_received = other.source_received;

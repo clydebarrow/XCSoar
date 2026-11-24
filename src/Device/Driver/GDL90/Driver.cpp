@@ -811,6 +811,7 @@ GDL90Device::ParseTrafficReport(std::span<const uint8_t> payload,
 
   slot->alarm_level = FlarmTraffic::AlarmType::NONE;
   slot->type = ToFlarmAircraftType(payload[17]);
+  slot->gdl90_address_type = address_type;
 
   /* id_type: ICAO for stable 24-bit addresses; RANDOM for self-assigned /
      track-file IDs so FlarmComputer skips callsign DB lookup (see FTD-012). */

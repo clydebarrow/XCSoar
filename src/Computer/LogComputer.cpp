@@ -62,12 +62,18 @@ LogComputer::LogThreats(const MoreData &basic,
       continue;
 
     int n = snprintf(line, sizeof(line),
-                     "TGT,%02u%02u%02u,%06X,%u,%.0f,%.0f,%.0f,%.0f,%.1f,%.1f,%.1f",
+                     "TGT,%02u%02u%02u,%06X,%u,%.0f,%.0f,%.0f,%.0f,"
+                     "%.1f,%.1f,%.1f,%s,",
                      time.hour, time.minute, time.second,
                      unsigned(t.id.Value()), unsigned(t.alarm_level),
                      t.relative_north, t.relative_east,
                      double(t.relative_altitude), Angle(t.track).Degrees(),
-                     double(t.speed), t.climb_rate, t.turn_rate);
+                     double(t.speed), t.climb_rate, t.turn_rate,
+                     FlarmTraffic::GetSourceString(t.source));
+    if (t.gdl90_address_type != FlarmTraffic::NO_ADDRESS_TYPE &&
+        n > 0 && size_t(n) < sizeof(line))
+      n += snprintf(line + n, sizeof(line) - n, "%u",
+                    unsigned(t.gdl90_address_type));
     if (status.available && status.target_id == t.id &&
         status.has_proximity_time && n > 0 && size_t(n) < sizeof(line))
       snprintf(line + n, sizeof(line) - n, ",%.1f", status.proximity_time);

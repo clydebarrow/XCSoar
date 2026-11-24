@@ -129,6 +129,14 @@ struct FlarmTraffic {
   IdType id_type;
 
   /**
+   * The address type of a GDL90 traffic report, which says how the
+   * sender received the target, or #NO_ADDRESS_TYPE for other traffic.
+   */
+  uint8_t gdl90_address_type;
+
+  static constexpr uint8_t NO_ADDRESS_TYPE = 0xff;
+
+  /**
    * Signal strength in dBm (PFLAA field 13, v9+).
    * Only valid when #rssi_available is true.
    */
@@ -216,6 +224,7 @@ struct FlarmTraffic {
     name.clear();
     source = SourceType::FLARM;
     id_type = IdType::UNKNOWN;
+    gdl90_address_type = NO_ADDRESS_TYPE;
     rssi = 0;
     rssi_available = false;
     source_received = false;
